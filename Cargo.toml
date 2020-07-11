@@ -1,0 +1,12 @@
+[package]
+name = "trayicon"
+version = "0.1.0"
+authors = ["Jari Otto Oskari Pennanen <ciantic@oksidi.com>"]
+edition = "2018"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3.9", features = ["winuser", "windef", "minwindef", "shellapi", "libloaderapi", "commctrl", "basetsd"] }
+
+[lib]
+name = "trayicon"
+path = "src/lib.rs"
