@@ -4,10 +4,22 @@ use std::{fmt::Debug, sync::mpsc::Sender};
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
-pub(crate) type TrayIconSender<T>
+#[cfg(not(feature = "use-winit"))]
+pub(crate) type TrayIconSender<T> = std::sync::mpsc::Sender<T>;
+
+#[cfg(feature = "use-winit")]
+pub(crate) type TrayIconSender<T> = winit::event_loop::EventLoopProxy<T>;
+
+pub(crate) fn send<T>(s: &TrayIconSender<T>, e: &T)
 where
-    T: PartialEq + Clone,
-= std::sync::mpsc::Sender<T>;
+    T: PartialEq + Clone + 'static,
+{
+    #[cfg(feature = "use-winit")]
+    let _ = s.send_event(e.clone());
+
+    #[cfg(not(feature = "use-winit"))]
+    let _ = s.send(e.clone());
+}
 
 #[derive(Clone)]
 pub struct Icon(sys::IconSys);
@@ -31,7 +43,7 @@ impl Icon {
 #[derive(Debug)]
 pub enum MenuItem<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     Separator,
     Item {
@@ -58,14 +70,14 @@ where
 #[derive(Debug, Default)]
 pub struct MenuBuilder<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     menu_items: Vec<MenuItem<T>>,
 }
 
 impl<T> MenuBuilder<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     pub fn new() -> MenuBuilder<T> {
         MenuBuilder { menu_items: vec![] }
@@ -124,7 +136,7 @@ where
 #[derive(Debug)]
 pub struct TrayIconBuilder<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     parent_hwnd: Option<u32>,
     icon: Result<Icon, Error>,
@@ -146,7 +158,7 @@ pub enum Error {
 
 impl<T> TrayIconBuilder<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     pub fn new(sender: TrayIconSender<T>) -> TrayIconBuilder<T> {
         TrayIconBuilder {
@@ -195,7 +207,7 @@ where
     pub fn with_menu<F>(mut self, f: F) -> Self
     where
         F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>, //Result<sys::MenuSys<T>, Error>,
-        T: PartialEq + Clone,
+        T: PartialEq + Clone + 'static,
     {
         self.menu = Some(f(MenuBuilder::new()).build());
         self
@@ -208,7 +220,7 @@ where
 
 pub trait TrayIcon<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;

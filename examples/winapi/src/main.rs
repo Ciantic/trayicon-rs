@@ -61,10 +61,6 @@ fn main() {
             }
             Events::Exit => {
                 println!("Please exit");
-                #[cfg(target_os = "windows")]
-                unsafe {
-                    winapi::um::winuser::PostQuitMessage(0);
-                }
             }
             Events::Item1 => {
                 tray_icon.set_icon(&second_icon).unwrap();
@@ -83,6 +79,8 @@ fn main() {
         })
     });
 
+    // Your applications message loop. Because all applications require an
+    // application loop, you are best served using an `winit` crate.
     loop {
         unsafe {
             let mut msg = MaybeUninit::uninit();

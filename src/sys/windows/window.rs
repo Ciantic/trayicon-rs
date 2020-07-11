@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{Error, Icon, TrayIcon, TrayIconSender};
+use crate::{send, Error, Icon, TrayIcon, TrayIconSender};
 use std::{collections::HashMap, fmt::Debug, sync::mpsc::Sender};
 use winapi::um::commctrl;
 
@@ -18,7 +18,7 @@ use winapi::um::commctrl;
 #[derive(Debug)]
 pub struct TrayIconWindow<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     hwnd: HWND,
     notify_icon: NotifyIcon,
@@ -34,7 +34,7 @@ unsafe impl<T> Sync for TrayIconWindow<T> where T: PartialEq + Clone {}
 
 impl<T> TrayIconWindow<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -47,7 +47,7 @@ where
         right_click_event: Option<T>,
     ) -> Result<Box<TrayIconWindow<T>>, Error>
     where
-        T: PartialEq + Clone,
+        T: PartialEq + Clone + 'static,
     {
         unsafe {
             let hinstance = GetModuleHandleA(0 as _);
@@ -158,7 +158,7 @@ where
                     // Left click tray icon
                     winuser::WM_LBUTTONUP => {
                         if let Some(e) = window.click_event.as_ref() {
-                            let _ = window.sender.send(e.clone());
+                            send(&window.sender, e);
                         }
                     }
 
@@ -166,7 +166,7 @@ where
                     winuser::WM_RBUTTONUP => {
                         // Send right click event
                         if let Some(e) = window.right_click_event.as_ref() {
-                            let _ = window.sender.send(e.clone());
+                            send(&window.sender, e);
                         }
 
                         // Show menu, if it's there
@@ -181,7 +181,7 @@ where
                     // Double click tray icon
                     winuser::WM_LBUTTONDBLCLK => {
                         if let Some(e) = window.double_click_event.as_ref() {
-                            let _ = window.sender.send(e.clone());
+                            send(&window.sender, e);
                         }
                     }
                     _ => {}
@@ -199,7 +199,7 @@ where
                 if cmd == 0 {
                     if let Some(v) = window.menu.as_ref() {
                         if let Some(event) = v.events.get(&(identifier as usize)) {
-                            let _ = window.sender.send(event.clone());
+                            send(&window.sender, event);
                         }
                     }
                 }
@@ -220,7 +220,7 @@ where
 
 impl<T> TrayIcon<T> for TrayIconWindow<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
         if !self.notify_icon.set_icon(&icon.0) {
@@ -238,7 +238,7 @@ where
 
 impl<T> Drop for TrayIconWindow<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + 'static,
 {
     fn drop(&mut self) {
         // https://devblogs.microsoft.com/oldnewthing/20110926-00/?p=9553
