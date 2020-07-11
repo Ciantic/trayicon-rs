@@ -68,7 +68,6 @@ impl Drop for NotifyIcon {
                 winapi::um::shellapi::NIM_DELETE,
                 &mut self.nid,
             );
-            println!("Drop tray icon");
         }
     }
 }

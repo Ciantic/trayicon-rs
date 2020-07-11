@@ -91,6 +91,5 @@ unsafe impl Sync for WinHMenu {}
 impl Drop for WinHMenu {
     fn drop(&mut self) {
         unsafe { winuser::DestroyMenu(self.hmenu) };
-        println!("Drop winhmenu");
     }
 }

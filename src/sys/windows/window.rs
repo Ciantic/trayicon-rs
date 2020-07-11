@@ -147,7 +147,6 @@ where
         match msg {
             // Window was created
             msgs::WM_USER_CREATE => {
-                // println!("Create window {:?}", window);
                 WM_TASKBARCREATED =
                     winuser::RegisterWindowMessageA("TaskbarCreated\0".as_ptr() as _);
                 window.notify_icon.add(hwnd);
