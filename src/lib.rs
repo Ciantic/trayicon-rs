@@ -4,6 +4,11 @@ use std::{fmt::Debug, sync::mpsc::Sender};
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
+pub(crate) type TrayIconSender<T>
+where
+    T: PartialEq + Clone,
+= std::sync::mpsc::Sender<T>;
+
 #[derive(Clone)]
 pub struct Icon(sys::IconSys);
 
@@ -111,7 +116,7 @@ where
         self
     }
 
-    pub fn build(self) -> Result<sys::MenuSys<T>, Error> {
+    pub(crate) fn build(self) -> Result<sys::MenuSys<T>, Error> {
         sys::build_menu(self)
     }
 }
@@ -129,7 +134,7 @@ where
     on_click: Option<T>,
     on_double_click: Option<T>,
     on_right_click: Option<T>,
-    sender: Sender<T>,
+    sender: TrayIconSender<T>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -143,7 +148,7 @@ impl<T> TrayIconBuilder<T>
 where
     T: PartialEq + Clone,
 {
-    pub fn new(sender: Sender<T>) -> TrayIconBuilder<T> {
+    pub fn new(sender: TrayIconSender<T>) -> TrayIconBuilder<T> {
         TrayIconBuilder {
             parent_hwnd: None,
             icon: Err(Error::IconMissing),
@@ -196,7 +201,7 @@ where
         self
     }
 
-    pub fn build(self) -> Result<Box<sys::TrayIconSys<T>>, Error> {
+    pub fn build(self) -> Result<Box<impl TrayIconBase<T>>, Error> {
         Ok(sys::build_trayicon(self)?)
     }
 }

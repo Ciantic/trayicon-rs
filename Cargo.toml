@@ -1,6 +1,6 @@
 [package]
 name = "trayicon"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 authors = ["Jari Otto Oskari Pennanen <ciantic@oksidi.com>"]
 edition = "2018"
 description = "Tray Icon, that thing in the corner"
@@ -11,6 +11,9 @@ repository = "https://github.com/ciantic/trayicon-rs/"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.9", features = ["winuser", "windef", "minwindef", "shellapi", "libloaderapi", "commctrl", "basetsd"] }
+
+[dependencies]
+winit = { version = "0.22.2", optional = true }
 
 [lib]
 name = "trayicon"
@@ -25,3 +28,6 @@ members = [
     "examples/winit",
     "examples/winapi",
 ]
+
+[features]
+use-winit = ["winit"]

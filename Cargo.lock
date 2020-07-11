@@ -657,9 +657,10 @@ dependencies = [
 
 [[package]]
 name = "trayicon"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "winapi 0.3.9",
+ "winit",
 ]
 
 [[package]]

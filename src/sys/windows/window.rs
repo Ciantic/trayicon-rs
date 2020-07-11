@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{Error, Icon, TrayIconBase};
+use crate::{Error, Icon, TrayIconBase, TrayIconSender};
 use std::{collections::HashMap, fmt::Debug, sync::mpsc::Sender};
 use winapi::um::commctrl;
 
@@ -26,7 +26,7 @@ where
     click_event: Option<T>,
     double_click_event: Option<T>,
     right_click_event: Option<T>,
-    sender: Sender<T>,
+    sender: TrayIconSender<T>,
 }
 
 unsafe impl<T> Send for TrayIconWindow<T> where T: PartialEq + Clone {}
@@ -38,7 +38,7 @@ where
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        sender: Sender<T>,
+        sender: TrayIconSender<T>,
         menu: Option<MenuSys<T>>,
         notify_icon: NotifyIcon,
         parent_hwnd: Option<HWND>,
