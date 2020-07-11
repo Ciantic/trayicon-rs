@@ -29,7 +29,11 @@ fn main() {
         .with_click(Events::ClickTrayIcon)
         .with_double_click(Events::DoubleClickTrayIcon)
         .with_menu(|menu| {
-            menu.with_checkable_item("This is checkable", true, Events::CheckItem1)
+            menu.with_item("Item 3 Replace Menu", Events::Item3)
+                .with_item("Item 2 Change Icon Green", Events::Item2)
+                .with_item("Item 1 Change Icon Red", Events::Item1)
+                .with_separator()
+                .with_checkable_item("This is checkable", true, Events::CheckItem1)
                 .with_child_menu("Sub Menu", |menu| {
                     menu.with_item("Sub item 1", Events::SubItem1)
                         .with_item("Sub Item 2", Events::SubItem2)
@@ -41,9 +45,6 @@ fn main() {
                     event: Events::Item4,
                     icon: None,
                 })
-                .with_item("Item 3 Replace Menu", Events::Item3)
-                .with_item("Item 2 Change Icon Green", Events::Item2)
-                .with_item("Item 1 Change Icon Red", Events::Item1)
                 .with_separator()
                 .with_item("E&xit", Events::Exit)
         })
