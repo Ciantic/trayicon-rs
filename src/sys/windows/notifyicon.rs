@@ -42,7 +42,8 @@ impl NotifyIcon {
         res == 1
     }
 
-    pub fn set_icon(&mut self, winhicon: WinHIcon) -> bool {
+    pub fn set_icon(&mut self, winhicon: &WinHIcon) -> bool {
+        let winhicon = winhicon.clone();
         self.winhicon = winhicon;
         self.nid.hIcon = self.winhicon.hicon;
         let res = unsafe {
@@ -51,6 +52,8 @@ impl NotifyIcon {
         res == 1
     }
 }
+unsafe impl Send for NotifyIcon {}
+unsafe impl Sync for NotifyIcon {}
 
 impl Debug for NotifyIcon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

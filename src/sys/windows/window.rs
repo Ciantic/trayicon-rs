@@ -1,15 +1,14 @@
-use super::{hicon, hmenu::WinHMenu, msgs, notifyicon::NotifyIcon, TrayIconSys};
+use super::{hmenu::WinHMenu, msgs, notifyicon::NotifyIcon, MenuSys};
 use winapi::shared::{
     basetsd::{DWORD_PTR, UINT_PTR},
-    minwindef::{LPARAM, LPVOID, LRESULT, UINT, WPARAM},
+    minwindef::{HIWORD, LOWORD, LPARAM, LPVOID, LRESULT, UINT, WPARAM},
     windef::{HBRUSH, HICON, HMENU, HWND, POINT},
 };
 use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
-use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, PostQuitMessage, RegisterClassA};
+use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{Error, TrayIconBase};
-use hicon::WinHIcon;
+use crate::{Error, Icon, TrayIconBase};
 use std::{collections::HashMap, fmt::Debug, sync::mpsc::Sender};
 use winapi::um::commctrl;
 
@@ -23,13 +22,15 @@ where
 {
     hwnd: HWND,
     notify_icon: NotifyIcon,
-    hmenu: Option<WinHMenu>,
+    menu: Option<MenuSys<T>>,
     click_event: Option<T>,
     double_click_event: Option<T>,
     right_click_event: Option<T>,
     sender: Sender<T>,
-    menu_events: Option<HashMap<usize, T>>,
 }
+
+unsafe impl<T> Send for TrayIconWindow<T> where T: PartialEq + Clone {}
+unsafe impl<T> Sync for TrayIconWindow<T> where T: PartialEq + Clone {}
 
 impl<T> TrayIconWindow<T>
 where
@@ -38,14 +39,13 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: Sender<T>,
+        menu: Option<MenuSys<T>>,
         notify_icon: NotifyIcon,
-        hmenu: Option<WinHMenu>,
         parent_hwnd: Option<HWND>,
         click_event: Option<T>,
         double_click_event: Option<T>,
         right_click_event: Option<T>,
-        menu_events: Option<HashMap<usize, T>>,
-    ) -> Result<TrayIconSys<T>, Error>
+    ) -> Result<Box<TrayIconWindow<T>>, Error>
     where
         T: PartialEq + Clone,
     {
@@ -70,12 +70,11 @@ where
             let mut window = Box::new(TrayIconWindow {
                 hwnd: 0 as HWND,
                 notify_icon,
-                hmenu,
+                menu,
                 click_event,
                 right_click_event,
                 double_click_event,
                 sender,
-                menu_events,
             });
             // Take the window memory location and pass it to wndproc and
             // subproc
@@ -153,9 +152,8 @@ where
                     winuser::RegisterWindowMessageA("TaskbarCreated\0".as_ptr() as _);
                 window.notify_icon.add(hwnd);
             }
-            winuser::WM_MENUCOMMAND => {
-                println!("Menu!");
-            }
+
+            // Mouse events on the tray icon
             msgs::WM_USER_TRAYICON => {
                 match lparam as u32 {
                     // Left click tray icon
@@ -173,11 +171,11 @@ where
                         }
 
                         // Show menu, if it's there
-                        if let Some(menu) = &window.hmenu {
+                        if let Some(menu) = &window.menu {
                             let mut pos = POINT { x: 0, y: 0 };
                             winuser::GetCursorPos(&mut pos as _);
                             winuser::SetForegroundWindow(hwnd);
-                            menu.track(hwnd, pos.x, pos.y)
+                            menu.menu.track(hwnd, pos.x, pos.y);
                         }
                     }
 
@@ -190,14 +188,29 @@ where
                     _ => {}
                 }
             }
-            // Window was destroyed
-            winapi::um::winuser::WM_DESTROY => {
-                PostQuitMessage(0);
+
+            // Any of the menu commands
+            //
+            // https://docs.microsoft.com/en-us/windows/win32/menurc/wm-command#parameters
+            winuser::WM_COMMAND => {
+                let identifier = LOWORD(wparam as u32);
+                let cmd = HIWORD(wparam as u32);
+
+                // Menu command
+                if cmd == 0 {
+                    if let Some(v) = window.menu.as_ref() {
+                        if let Some(event) = v.events.get(&(identifier as usize)) {
+                            let _ = window.sender.send(event.clone());
+                        }
+                    }
+                }
             }
+
             // TaskbarCreated
             x if x == WM_TASKBARCREATED => {
                 window.notify_icon.add(hwnd);
             }
+
             _ => {
                 return commctrl::DefSubclassProc(hwnd, msg, wparam, lparam);
             }
@@ -206,19 +219,20 @@ where
     }
 }
 
-impl<T> TrayIconBase for TrayIconWindow<T>
+impl<T> TrayIconBase<T> for TrayIconWindow<T>
 where
     T: PartialEq + Clone,
 {
-    fn set_icon_from_buffer(
-        &mut self,
-        buffer: &'static [u8],
-        width: Option<u32>,
-        height: Option<u32>,
-    ) -> Result<(), Error> {
-        self.notify_icon.set_icon(
-            WinHIcon::new_from_buffer(buffer, width, height).ok_or(Error::IconLoadingFailed)?,
-        );
+    fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
+        if !self.notify_icon.set_icon(&icon.0) {
+            return Err(Error::IconLoadingFailed);
+        }
+        Ok(())
+    }
+
+    fn set_menu(&mut self, menu: crate::MenuBuilder<T>) -> Result<(), Error> {
+        let menu = menu.build()?;
+        self.menu = Some(menu);
         Ok(())
     }
 }

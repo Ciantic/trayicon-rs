@@ -1,0 +1,10 @@
+[package]
+name = "trayicon-winit-example"
+version = "0.0.1"
+authors = ["Jari Otto Oskari Pennanen"]
+edition = "2018"
+publish = false
+
+[dependencies]
+winit = "0.22.2"
+trayicon = { path = "../../" }

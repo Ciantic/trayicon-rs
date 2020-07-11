@@ -18,3 +18,9 @@ path = "src/lib.rs"
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
+
+[workspace]
+members = [
+    "examples/winit",
+    "examples/winapi",
+]

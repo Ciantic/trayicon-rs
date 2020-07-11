@@ -1,10 +1,10 @@
 # TrayIcon
 
-Currently I target Windows tray icon implementation, with popup, click, double click. Goal is to provide a channel for events and ability to plug in [winit](https://github.com/rust-windowing/winit) event loop easily.
+Currently I target Windows tray icon implementation, with popup menu, click, double click events. Goal is to provide a channel for events and ability to plug in [winit](https://github.com/rust-windowing/winit) event loop easily.
 
 ## TODO
 
-Provide coordinates of the Tray Icon area
+Provide coordinates of the Tray Icon area for custom popups.
 
 ## Alternatives
 

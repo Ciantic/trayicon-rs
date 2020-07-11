@@ -1,15 +1,53 @@
-use std::sync::mpsc::Sender;
+use std::{fmt::Debug, sync::mpsc::Sender};
 
 #[cfg(target_os = "windows")]
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
+#[derive(Clone)]
+pub struct Icon(sys::IconSys);
+
+impl Debug for Icon {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Icon")
+    }
+}
+
+impl Icon {
+    pub fn from_buffer(
+        buffer: &'static [u8],
+        width: Option<u32>,
+        height: Option<u32>,
+    ) -> Result<Icon, Error> {
+        sys::IconSys::from_buffer(buffer, width, height).map(Icon)
+    }
+}
+
 #[derive(Debug)]
-pub enum MenuItem<T> {
+pub enum MenuItem<T>
+where
+    T: PartialEq + Clone,
+{
     Separator,
-    Item(String, T),
-    CheckableItem(String, bool, T),
-    ChildMenu(String, Result<sys::MenuSys<T>, Error>),
+    Item {
+        name: String,
+        event: T,
+        disabled: bool,
+        icon: Option<Icon>,
+    },
+    CheckableItem {
+        name: String,
+        is_checked: bool,
+        event: T,
+        disabled: bool,
+        icon: Option<Icon>,
+    },
+    ChildMenu {
+        name: String,
+        children: MenuBuilder<T>,
+        disabled: bool,
+        icon: Option<Icon>,
+    },
 }
 
 #[derive(Debug, Default)]
@@ -28,9 +66,8 @@ where
         MenuBuilder { menu_items: vec![] }
     }
 
-    pub fn with_item(mut self, name: &str, on_click: T) -> Self {
-        self.menu_items
-            .push(MenuItem::Item(name.to_string(), on_click));
+    pub fn with(mut self, item: MenuItem<T>) -> Self {
+        self.menu_items.push(item);
         self
     }
 
@@ -39,33 +76,53 @@ where
         self
     }
 
+    pub fn with_item(mut self, name: &str, on_click: T) -> Self {
+        self.menu_items.push(MenuItem::Item {
+            name: name.to_string(),
+            event: on_click,
+            disabled: false,
+            icon: None,
+        });
+        self
+    }
+
     pub fn with_checkable_item(mut self, name: &str, is_checked: bool, on_click: T) -> Self {
-        self.menu_items.push(MenuItem::CheckableItem(
-            name.to_string(),
+        self.menu_items.push(MenuItem::CheckableItem {
+            name: name.to_string(),
             is_checked,
-            on_click,
-        ));
+            event: on_click,
+            disabled: false,
+            icon: None,
+        });
         self
     }
 
     pub fn with_child_menu<F>(mut self, name: &str, f: F) -> Self
     where
-        F: FnOnce(MenuBuilder<T>) -> Result<sys::MenuSys<T>, Error>,
+        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>,
     {
         let sub = MenuBuilder::new();
-        self.menu_items
-            .push(MenuItem::ChildMenu(name.to_string(), f(sub)));
+        self.menu_items.push(MenuItem::ChildMenu {
+            name: name.to_string(),
+            children: f(sub),
+            disabled: false,
+            icon: None,
+        });
         self
     }
+
     pub fn build(self) -> Result<sys::MenuSys<T>, Error> {
         sys::build_menu(self)
     }
 }
 
 #[derive(Debug)]
-pub struct TrayIconBuilder<T> {
+pub struct TrayIconBuilder<T>
+where
+    T: PartialEq + Clone,
+{
     parent_hwnd: Option<u32>,
-    icon_buffer: Option<&'static [u8]>,
+    icon: Result<Icon, Error>,
     width: Option<u32>,
     height: Option<u32>,
     menu: Option<Result<sys::MenuSys<T>, Error>>,
@@ -78,6 +135,7 @@ pub struct TrayIconBuilder<T> {
 #[derive(Debug, Clone, Copy)]
 pub enum Error {
     IconLoadingFailed,
+    IconMissing,
     OsError,
 }
 
@@ -88,7 +146,7 @@ where
     pub fn new(sender: Sender<T>) -> TrayIconBuilder<T> {
         TrayIconBuilder {
             parent_hwnd: None,
-            icon_buffer: None,
+            icon: Err(Error::IconMissing),
             width: None,
             height: None,
             menu: None,
@@ -119,89 +177,96 @@ where
         self
     }
 
+    pub fn with_icon(mut self, icon: Icon) -> Self {
+        self.icon = Ok(icon);
+        self
+    }
+
     pub fn with_icon_from_buffer(mut self, buffer: &'static [u8]) -> Self {
-        self.icon_buffer = Some(buffer);
+        self.icon = Icon::from_buffer(buffer, None, None);
         self
     }
 
     pub fn with_menu<F>(mut self, f: F) -> Self
     where
-        F: FnOnce(MenuBuilder<T>) -> Result<sys::MenuSys<T>, Error>,
+        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>, //Result<sys::MenuSys<T>, Error>,
         T: PartialEq + Clone,
     {
-        let mut builder = MenuBuilder::new();
-        self.menu = Some(f(builder));
+        self.menu = Some(f(MenuBuilder::new()).build());
         self
     }
 
-    pub fn build(self) -> Result<TrayIcon<T>, Error> {
-        Ok(TrayIcon(sys::build_icon(self)?))
+    pub fn build(self) -> Result<Box<sys::TrayIconSys<T>>, Error> {
+        Ok(sys::build_trayicon(self)?)
     }
 }
 
-pub struct TrayIcon<T>(crate::sys::TrayIconSys<T>)
-where
-    T: PartialEq + Clone;
-
-pub trait TrayIconBase {
-    fn set_icon_from_buffer(
-        &mut self,
-        buffer: &'static [u8],
-        width: Option<u32>,
-        height: Option<u32>,
-    ) -> Result<(), Error>;
-}
-
-impl<T> TrayIconBase for TrayIcon<T>
+pub trait TrayIconBase<T>
 where
     T: PartialEq + Clone,
 {
-    fn set_icon_from_buffer(
-        &mut self,
-        buffer: &'static [u8],
-        width: Option<u32>,
-        height: Option<u32>,
-    ) -> Result<(), Error> {
-        self.0.set_icon_from_buffer(buffer, width, height)
-    }
+    fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
+    fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[derive(Copy, Clone, Eq, PartialEq)]
+    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     enum Events {
         ClickTrayIcon,
         DoubleClickTrayIcon,
         Exit,
         Item1,
+        Item2,
+        Item3,
+        Item4,
         CheckItem1,
         SubItem1,
         SubItem2,
         SubItem3,
+        SubSubItem1,
+        SubSubItem2,
+        SubSubItem3,
     }
 
     #[test]
-    fn test_menu() {
+    fn test_integration_test() {
         let (s, r) = std::sync::mpsc::channel::<Events>();
         let icon = include_bytes!("./testresource/icon1.ico");
-        let _tray_icon = TrayIconBuilder::new(s)
+        let icon2 = include_bytes!("./testresource/icon2.ico");
+
+        let second_icon = Icon::from_buffer(icon2, None, None).unwrap();
+        let first_icon = Icon::from_buffer(icon, None, None).unwrap();
+
+        let mut tray_icon = TrayIconBuilder::new(s)
+            .with_icon_from_buffer(icon)
             .with_click(Events::ClickTrayIcon)
             .with_double_click(Events::DoubleClickTrayIcon)
-            .with_icon_from_buffer(icon)
             .with_menu(|menu| {
-                menu.with_checkable_item("This is checkable", false, Events::CheckItem1)
+                menu.with_checkable_item("This is checkable", true, Events::CheckItem1)
                     .with_child_menu("Sub Menu", |menu| {
                         menu.with_item("Sub item 1", Events::SubItem1)
                             .with_item("Sub Item 2", Events::SubItem2)
                             .with_item("Sub Item 3", Events::SubItem3)
-                            .build()
+                            .with_child_menu("Sub Sub menu", |menu| {
+                                menu.with_item("Sub Sub item 1", Events::SubSubItem1)
+                                    .with_item("Sub Sub Item 2", Events::SubSubItem2)
+                                    .with_item("Sub Sub Item 3", Events::SubSubItem3)
+                            })
                     })
-                    .with_item("Item 1", Events::Item1)
+                    .with(MenuItem::Item {
+                        name: "Item Disabled".into(),
+                        disabled: true, // Disabled entry example
+                        event: Events::Item4,
+                        icon: None,
+                    })
+                    .with_item("Item 3 Replace Menu", Events::Item3)
+                    .with_item("Item 2 Change Icon Green", Events::Item2)
+                    .with_item("Item 1 Change Icon Red", Events::Item1)
                     .with_separator()
                     .with_item("E&xit", Events::Exit)
-                    .build()
             })
             .build()
             .unwrap();
@@ -216,8 +281,25 @@ mod tests {
                 }
                 Events::Exit => {
                     println!("Please exit");
+                    #[cfg(target_os = "windows")]
+                    unsafe {
+                        winapi::um::winuser::PostQuitMessage(0);
+                    }
                 }
-                _ => {}
+                Events::Item1 => {
+                    tray_icon.set_icon(&second_icon).unwrap();
+                }
+                Events::Item2 => {
+                    tray_icon.set_icon(&first_icon).unwrap();
+                }
+                Events::Item3 => {
+                    tray_icon
+                        .set_menu(MenuBuilder::new().with_item("Exit", Events::Exit))
+                        .unwrap();
+                }
+                e => {
+                    println!("{:?}", e);
+                }
             })
         });
 

@@ -1,25 +1,28 @@
+use crate::Error;
 use winapi::shared::minwindef::PBYTE;
 use winapi::shared::windef::HICON;
 use winapi::um::winuser;
 
 /// Purpose of this struct is to keep hicon handle, and drop it when the struct
 /// is dropped
+#[derive(PartialEq)]
 pub struct WinHIcon {
     pub hicon: HICON,
 }
 
 impl WinHIcon {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> WinHIcon {
         WinHIcon {
             hicon: unsafe { winuser::LoadIconW(std::ptr::null_mut(), winuser::IDI_APPLICATION) },
         }
     }
 
-    pub fn new_from_buffer(
+    pub fn from_buffer(
         buffer: &[u8],
         width: Option<u32>,
         height: Option<u32>,
-    ) -> Option<WinHIcon> {
+    ) -> Result<WinHIcon, Error> {
         let offset = unsafe {
             winuser::LookupIconIdFromDirectoryEx(
                 buffer.as_ptr() as PBYTE,
@@ -30,7 +33,7 @@ impl WinHIcon {
             )
         };
         if offset <= 0 {
-            return None;
+            return Err(Error::IconLoadingFailed);
         }
         let icon_data = &buffer[offset as usize..];
         let hicon = unsafe {
@@ -45,11 +48,22 @@ impl WinHIcon {
             )
         };
         if hicon.is_null() {
-            return None;
+            return Err(Error::IconLoadingFailed);
         }
-        Some(WinHIcon { hicon })
+        Ok(WinHIcon { hicon })
     }
 }
+
+impl Clone for WinHIcon {
+    fn clone(&self) -> Self {
+        WinHIcon {
+            hicon: unsafe { winuser::CopyIcon(self.hicon) },
+        }
+    }
+}
+
+unsafe impl Send for WinHIcon {}
+unsafe impl Sync for WinHIcon {}
 
 impl Drop for WinHIcon {
     fn drop(&mut self) {
