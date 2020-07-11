@@ -201,12 +201,12 @@ where
         self
     }
 
-    pub fn build(self) -> Result<Box<impl TrayIconBase<T>>, Error> {
+    pub fn build(self) -> Result<Box<impl TrayIcon<T>>, Error> {
         Ok(sys::build_trayicon(self)?)
     }
 }
 
-pub trait TrayIconBase<T>
+pub trait TrayIcon<T>
 where
     T: PartialEq + Clone,
 {

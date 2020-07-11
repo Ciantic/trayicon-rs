@@ -25,7 +25,7 @@ where
     menu: WinHMenu,
 }
 
-/// Build the icon
+/// Build the tray icon
 pub fn build_trayicon<T>(builder: TrayIconBuilder<T>) -> Result<Box<TrayIconSys<T>>, Error>
 where
     T: PartialEq + Clone,
@@ -55,6 +55,7 @@ where
     )?)
 }
 
+/// Build the menu from Windows HMENU
 pub fn build_menu<T>(builder: MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
     T: PartialEq + Clone,

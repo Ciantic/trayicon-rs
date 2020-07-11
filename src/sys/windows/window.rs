@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{Error, Icon, TrayIconBase, TrayIconSender};
+use crate::{Error, Icon, TrayIcon, TrayIconSender};
 use std::{collections::HashMap, fmt::Debug, sync::mpsc::Sender};
 use winapi::um::commctrl;
 
@@ -218,7 +218,7 @@ where
     }
 }
 
-impl<T> TrayIconBase<T> for TrayIconWindow<T>
+impl<T> TrayIcon<T> for TrayIconWindow<T>
 where
     T: PartialEq + Clone,
 {
