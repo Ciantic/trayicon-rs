@@ -1,4 +1,7 @@
-use std::{fmt::Debug, sync::mpsc::Sender};
+//! ## Example
+//! [Open full example with winit here 🢅](https://github.com/Ciantic/trayicon-rs/blob/master/examples/winit/src/main.rs)
+
+use std::fmt::Debug;
 
 #[cfg(target_os = "windows")]
 #[path = "./sys/windows/mod.rs"]

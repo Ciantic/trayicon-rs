@@ -1,6 +1,6 @@
 use super::{hicon::WinHIcon, msgs};
 use std::fmt::Debug;
-use winapi::shared::windef::{HICON, HWND};
+use winapi::shared::windef::HWND;
 
 /// Purpose of this struct is to retain NotifyIconDataW and remove it on drop
 pub struct NotifyIcon {

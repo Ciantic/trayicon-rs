@@ -83,7 +83,7 @@ where
         } => {
             if let Ok(menusys) = build_menu_inner(j, children) {
                 map.extend(menusys.events.into_iter());
-                hmenu.add_child_menu(&name, menusys.menu);
+                hmenu.add_child_menu(&name, menusys.menu, disabled);
             }
         }
         MenuItem::CheckableItem {
@@ -108,7 +108,6 @@ where
             hmenu.add_menu_item(&name, *j, disabled);
         }
         MenuItem::Separator => hmenu.add_separator(),
-        _ => {}
     });
 
     Ok(MenuSys {

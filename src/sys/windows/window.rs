@@ -1,4 +1,4 @@
-use super::{hmenu::WinHMenu, msgs, notifyicon::NotifyIcon, MenuSys};
+use super::{msgs, notifyicon::NotifyIcon, MenuSys};
 use winapi::shared::{
     basetsd::{DWORD_PTR, UINT_PTR},
     minwindef::{HIWORD, LOWORD, LPARAM, LPVOID, LRESULT, UINT, WPARAM},
@@ -9,7 +9,7 @@ use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
 use crate::{send, Error, Icon, TrayIcon, TrayIconSender};
-use std::{collections::HashMap, fmt::Debug, sync::mpsc::Sender};
+use std::fmt::Debug;
 use winapi::um::commctrl;
 
 /// Tray Icon WINAPI Window

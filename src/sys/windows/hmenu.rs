@@ -60,11 +60,15 @@ impl WinHMenu {
             )
         };
     }
-    pub fn add_child_menu(&mut self, name: &str, menu: WinHMenu) {
+    pub fn add_child_menu(&mut self, name: &str, menu: WinHMenu, disabled: bool) {
+        let mut flags = winuser::MF_POPUP;
+        if disabled {
+            flags |= winuser::MF_GRAYED
+        }
         let _res = unsafe {
             winuser::AppendMenuW(
                 self.hmenu,
-                winuser::MF_POPUP,
+                flags,
                 menu.hmenu as _,
                 format!("{}\0", name)
                     .encode_utf16()

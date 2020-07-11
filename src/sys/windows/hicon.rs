@@ -12,6 +12,7 @@ pub struct WinHIcon {
 
 impl WinHIcon {
     #[allow(clippy::new_without_default)]
+    #[allow(dead_code)]
     pub fn new() -> WinHIcon {
         WinHIcon {
             hicon: unsafe { winuser::LoadIconW(std::ptr::null_mut(), winuser::IDI_APPLICATION) },
