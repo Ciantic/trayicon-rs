@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{send, Error, Icon, TrayIcon, TrayIconSender};
+use crate::{Error, Icon, TrayIcon, TrayIconSender};
 use std::fmt::Debug;
 use winapi::um::commctrl;
 
@@ -158,7 +158,7 @@ where
                     // Left click tray icon
                     winuser::WM_LBUTTONUP => {
                         if let Some(e) = window.click_event.as_ref() {
-                            send(&window.sender, e);
+                            window.sender.send(e);
                         }
                     }
 
@@ -166,7 +166,7 @@ where
                     winuser::WM_RBUTTONUP => {
                         // Send right click event
                         if let Some(e) = window.right_click_event.as_ref() {
-                            send(&window.sender, e);
+                            window.sender.send(e);
                         }
 
                         // Show menu, if it's there
@@ -181,7 +181,7 @@ where
                     // Double click tray icon
                     winuser::WM_LBUTTONDBLCLK => {
                         if let Some(e) = window.double_click_event.as_ref() {
-                            send(&window.sender, e);
+                            window.sender.send(e);
                         }
                     }
                     _ => {}
@@ -199,7 +199,7 @@ where
                 if cmd == 0 {
                     if let Some(v) = window.menu.as_ref() {
                         if let Some(event) = v.events.get(&(identifier as usize)) {
-                            send(&window.sender, event);
+                            window.sender.send(event);
                         }
                     }
                 }
@@ -236,8 +236,12 @@ where
 
     /// Set menu
     fn set_menu(&mut self, menu: crate::MenuBuilder<T>) -> Result<(), Error> {
-        let menu = menu.build()?;
-        self.menu = Some(menu);
+        if menu.menu_items.is_empty() {
+            self.menu = None
+        } else {
+            let menu = menu.build()?;
+            self.menu = Some(menu);
+        }
         Ok(())
     }
 }

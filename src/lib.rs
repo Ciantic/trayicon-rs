@@ -7,6 +7,7 @@ use std::fmt::Debug;
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
+/// Tray Icon event sender
 #[derive(Debug, Clone)]
 pub(crate) enum TrayIconSender<T>
 where
@@ -21,21 +22,23 @@ where
     Crossbeam(crossbeam_channel::Sender<T>),
 }
 
-pub(crate) fn send<T>(s: &TrayIconSender<T>, e: &T)
+impl<T> TrayIconSender<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    match s {
-        TrayIconSender::Std(s) => {
-            let _ = s.send(e.clone());
-        }
-        #[cfg(feature = "winit")]
-        TrayIconSender::Winit(s) => {
-            let _ = s.send_event(e.clone());
-        }
-        #[cfg(feature = "crossbeam-channel")]
-        TrayIconSender::Crossbeam(s) => {
-            let _ = s.try_send(e.clone());
+    pub fn send(&self, e: &T) {
+        match self {
+            TrayIconSender::Std(s) => {
+                let _ = s.send(e.clone());
+            }
+            #[cfg(feature = "winit")]
+            TrayIconSender::Winit(s) => {
+                let _ = s.send_event(e.clone());
+            }
+            #[cfg(feature = "crossbeam-channel")]
+            TrayIconSender::Crossbeam(s) => {
+                let _ = s.try_send(e.clone());
+            }
         }
     }
 }
@@ -255,7 +258,10 @@ pub trait TrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
+    /// Set the icon
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
+
+    /// Set the menu
     fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
 
     // TODO: Maybe not implement these, instead use reactively set_menu
