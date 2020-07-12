@@ -1,6 +1,7 @@
 use core::mem::MaybeUninit;
 use trayicon::*;
 use winapi::um::winuser;
+
 fn main() {
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     enum Events {

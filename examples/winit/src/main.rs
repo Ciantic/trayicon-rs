@@ -6,7 +6,7 @@ use winit::{
 
 use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 enum Events {
     ClickTrayIcon,
     DoubleClickTrayIcon,
@@ -83,7 +83,7 @@ fn main() {
                         .set_menu(MenuBuilder::new().with_item("Exit", Events::Exit))
                         .unwrap();
                 }
-                _ => (),
+                e => println!("Got event {:?}", e),
             },
             _ => (),
         }

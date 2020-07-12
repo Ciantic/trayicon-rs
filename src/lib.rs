@@ -7,11 +7,14 @@ use std::fmt::Debug;
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
-#[cfg(not(feature = "use-winit"))]
+#[cfg(all(not(feature = "use-winit"), not(feature = "use-crossbeam-channel")))]
 pub(crate) type TrayIconSender<T> = std::sync::mpsc::Sender<T>;
 
 #[cfg(feature = "use-winit")]
 pub(crate) type TrayIconSender<T> = winit::event_loop::EventLoopProxy<T>;
+
+#[cfg(feature = "use-crossbeam-channel")]
+pub(crate) type TrayIconSender<T> = crossbeam_channel::Sender<T>;
 
 pub(crate) fn send<T>(s: &TrayIconSender<T>, e: &T)
 where
@@ -20,7 +23,10 @@ where
     #[cfg(feature = "use-winit")]
     let _ = s.send_event(e.clone());
 
-    #[cfg(not(feature = "use-winit"))]
+    #[cfg(feature = "use-crossbeam-channel")]
+    let _ = s.try_send(e.clone());
+
+    #[cfg(all(not(feature = "use-winit"), not(feature = "use-crossbeam-channel")))]
     let _ = s.send(e.clone());
 }
 
@@ -253,7 +259,12 @@ mod tests {
 
     #[test]
     fn test_integration_test() {
+        #[cfg(feature = "use-crossbeam-channel")]
+        let (s, r) = crossbeam_channel::unbounded();
+
+        #[cfg(all(not(feature = "use-winit"), not(feature = "use-crossbeam-channel")))]
         let (s, r) = std::sync::mpsc::channel::<Events>();
+
         let icon = include_bytes!("./testresource/icon1.ico");
         let icon2 = include_bytes!("./testresource/icon2.ico");
 
