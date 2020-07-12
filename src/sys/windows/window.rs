@@ -21,12 +21,12 @@ where
     T: PartialEq + Clone + 'static,
 {
     hwnd: HWND,
-    notify_icon: NotifyIcon,
-    menu: Option<MenuSys<T>>,
-    click_event: Option<T>,
-    double_click_event: Option<T>,
-    right_click_event: Option<T>,
     sender: TrayIconSender<T>,
+    menu: Option<MenuSys<T>>,
+    notify_icon: NotifyIcon,
+    on_click: Option<T>,
+    on_double_click: Option<T>,
+    on_right_click: Option<T>,
 }
 
 unsafe impl<T> Send for TrayIconWindow<T> where T: PartialEq + Clone {}
@@ -41,10 +41,9 @@ where
         sender: TrayIconSender<T>,
         menu: Option<MenuSys<T>>,
         notify_icon: NotifyIcon,
-        parent_hwnd: Option<HWND>,
-        click_event: Option<T>,
-        double_click_event: Option<T>,
-        right_click_event: Option<T>,
+        on_click: Option<T>,
+        on_double_click: Option<T>,
+        on_right_click: Option<T>,
     ) -> Result<Box<TrayIconWindow<T>>, Error>
     where
         T: PartialEq + Clone + 'static,
@@ -71,9 +70,9 @@ where
                 hwnd: 0 as HWND,
                 notify_icon,
                 menu,
-                click_event,
-                right_click_event,
-                double_click_event,
+                on_click,
+                on_right_click,
+                on_double_click,
                 sender,
             });
             // Take the window memory location and pass it to wndproc and
@@ -92,7 +91,7 @@ where
                 winuser::CW_USEDEFAULT,
                 winuser::CW_USEDEFAULT,
                 winuser::CW_USEDEFAULT,
-                parent_hwnd.unwrap_or(0 as _),
+                0 as _,
                 0 as HMENU,
                 hinstance,
                 ptr as *mut _ as LPVOID,
@@ -157,7 +156,7 @@ where
                 match lparam as u32 {
                     // Left click tray icon
                     winuser::WM_LBUTTONUP => {
-                        if let Some(e) = window.click_event.as_ref() {
+                        if let Some(e) = window.on_click.as_ref() {
                             window.sender.send(e);
                         }
                     }
@@ -165,7 +164,7 @@ where
                     // Right click tray icon
                     winuser::WM_RBUTTONUP => {
                         // Send right click event
-                        if let Some(e) = window.right_click_event.as_ref() {
+                        if let Some(e) = window.on_right_click.as_ref() {
                             window.sender.send(e);
                         }
 
@@ -180,7 +179,7 @@ where
 
                     // Double click tray icon
                     winuser::WM_LBUTTONDBLCLK => {
-                        if let Some(e) = window.double_click_event.as_ref() {
+                        if let Some(e) = window.on_double_click.as_ref() {
                             window.sender.send(e);
                         }
                     }

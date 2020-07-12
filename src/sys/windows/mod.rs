@@ -1,4 +1,3 @@
-use winapi::shared::windef::HWND;
 mod hicon;
 mod hmenu;
 mod notifyicon;
@@ -32,7 +31,6 @@ where
 {
     let mut menu: Option<MenuSys<T>> = None;
     let hicon: WinHIcon = builder.icon?.0;
-    let parent_hwnd: Option<HWND> = None;
     let on_click = builder.on_click;
     let on_right_click = builder.on_right_click;
     let sender = builder.sender.ok_or(Error::SenderMissing)?;
@@ -48,7 +46,6 @@ where
         sender,
         menu,
         notify_icon,
-        parent_hwnd,
         on_click,
         on_double_click,
         on_right_click,
