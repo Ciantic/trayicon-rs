@@ -261,7 +261,10 @@ where
     T: PartialEq + Clone + 'static,
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
-    fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
+    // fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
+    fn set_menu<F>(&mut self, f: F) -> Result<(), Error>
+    where
+        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>;
 
     // TODO: Maybe not implement these, instead use reactively set_menu
     // fn set_item_check(&mut self, event: T, is_checked: bool) -> Result<(), Error>;

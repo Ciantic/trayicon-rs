@@ -235,9 +235,23 @@ where
     }
 
     /// Set menu
-    fn set_menu(&mut self, menu: crate::MenuBuilder<T>) -> Result<(), Error> {
-        let menu = menu.build()?;
-        self.menu = Some(menu);
+    // fn set_menu(&mut self, menu: crate::MenuBuilder<T>) -> Result<(), Error> {
+    //     let menu = menu.build()?;
+    //     self.menu = Some(menu);
+    //     Ok(())
+    // }
+
+    fn set_menu<F>(&mut self, f: F) -> Result<(), Error>
+    where
+        F: FnOnce(crate::MenuBuilder<T>) -> crate::MenuBuilder<T>,
+    {
+        let sub = crate::MenuBuilder::new();
+        let menu = f(sub).build()?;
+        if menu.events.is_empty() {
+            self.menu = None
+        } else {
+            self.menu = Some(menu);
+        }
         Ok(())
     }
 }
