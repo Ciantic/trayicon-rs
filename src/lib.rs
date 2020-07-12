@@ -156,7 +156,6 @@ pub struct TrayIconBuilder<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    parent_hwnd: Option<u32>,
     icon: Result<Icon, Error>,
     width: Option<u32>,
     height: Option<u32>,
@@ -182,7 +181,6 @@ where
     #[allow(clippy::new_without_default)]
     pub fn new() -> TrayIconBuilder<T> {
         TrayIconBuilder {
-            parent_hwnd: None,
             icon: Err(Error::IconMissing),
             width: None,
             height: None,
@@ -223,11 +221,6 @@ where
 
     pub fn with_right_click(mut self, event: T) -> Self {
         self.on_right_click = Some(event);
-        self
-    }
-
-    pub fn with_parent_hwnd(mut self, hwnd: u32) -> Self {
-        self.parent_hwnd = Some(hwnd);
         self
     }
 
