@@ -37,7 +37,7 @@ where
     T: PartialEq + Clone + 'static,
 {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub(crate) fn new(
         sender: TrayIconSender<T>,
         menu: Option<MenuSys<T>>,
         notify_icon: NotifyIcon,

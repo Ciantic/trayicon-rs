@@ -25,7 +25,8 @@ fn main() {
     let second_icon = Icon::from_buffer(icon2, None, None).unwrap();
     let first_icon = Icon::from_buffer(icon, None, None).unwrap();
 
-    let mut tray_icon = TrayIconBuilder::new(s)
+    let mut tray_icon = TrayIconBuilder::new()
+        .with_sender_crossbeam(s)
         .with_icon_from_buffer(icon)
         .with_click(Events::ClickTrayIcon)
         .with_double_click(Events::DoubleClickTrayIcon)

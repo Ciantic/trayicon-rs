@@ -3,50 +3,41 @@
 
 use std::fmt::Debug;
 
-// cfg_if::cfg_if! {
-//     if #[cfg(feature = "winit")] {
-//         pub(crate) type TrayIconSender<T> = winit::event_loop::EventLoopProxy<T>;
-//     } else if #[cfg(feature = "crossbeam-channel")] {
-//         pub(crate) type TrayIconSender<T> = crossbeam_channel::Sender<T>;
-//     } else {
-//         pub(crate) type TrayIconSender<T> = std::sync::mpsc::Sender<T>;
-//     }
-// }
-
 #[cfg(target_os = "windows")]
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
-#[cfg(all(not(feature = "winit"), not(feature = "crossbeam-channel")))]
-pub(crate) type TrayIconSender<T> = std::sync::mpsc::Sender<T>;
+#[derive(Debug, Clone)]
+pub(crate) enum TrayIconSender<T>
+where
+    T: PartialEq + Clone + 'static,
+{
+    Std(std::sync::mpsc::Sender<T>),
 
-#[cfg(feature = "winit")]
-pub(crate) type TrayIconSender<T> = winit::event_loop::EventLoopProxy<T>;
+    #[cfg(feature = "winit")]
+    Winit(winit::event_loop::EventLoopProxy<T>),
 
-#[cfg(feature = "crossbeam-channel")]
-pub(crate) type TrayIconSender<T> = crossbeam_channel::Sender<T>;
+    #[cfg(feature = "crossbeam-channel")]
+    Crossbeam(crossbeam_channel::Sender<T>),
+}
 
 pub(crate) fn send<T>(s: &TrayIconSender<T>, e: &T)
 where
     T: PartialEq + Clone + 'static,
 {
-    // cfg_if::cfg_if! {
-    //     if #[cfg(feature = "winit")] {
-    //         let _ = s.send_event(e.clone());
-    //     } else if #[cfg(feature = "crossbeam-channel")] {
-    //         let _ = s.try_send(e.clone());
-    //     } else {
-    //         let _ = s.send(e.clone());
-    //     }
-    // }
-    #[cfg(feature = "winit")]
-    let _ = s.send_event(e.clone());
-
-    #[cfg(feature = "crossbeam-channel")]
-    let _ = s.try_send(e.clone());
-
-    #[cfg(all(not(feature = "winit"), not(feature = "crossbeam-channel")))]
-    let _ = s.send(e.clone());
+    match s {
+        TrayIconSender::Std(s) => {
+            let _ = s.send(e.clone());
+        }
+        #[cfg(feature = "winit")]
+        TrayIconSender::Winit(s) => {
+            let _ = s.send_event(e.clone());
+        }
+        #[cfg(feature = "crossbeam-channel")]
+        TrayIconSender::Crossbeam(s) => {
+            let _ = s.try_send(e.clone());
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -161,7 +152,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TrayIconBuilder<T>
 where
     T: PartialEq + Clone + 'static,
@@ -170,16 +161,17 @@ where
     icon: Result<Icon, Error>,
     width: Option<u32>,
     height: Option<u32>,
-    menu: Option<Result<sys::MenuSys<T>, Error>>,
+    menu: Option<MenuBuilder<T>>,
     on_click: Option<T>,
     on_double_click: Option<T>,
     on_right_click: Option<T>,
-    sender: TrayIconSender<T>,
+    sender: Option<TrayIconSender<T>>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum Error {
     IconLoadingFailed,
+    SenderMissing,
     IconMissing,
     OsError,
 }
@@ -188,7 +180,8 @@ impl<T> TrayIconBuilder<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    pub fn new(sender: TrayIconSender<T>) -> TrayIconBuilder<T> {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> TrayIconBuilder<T> {
         TrayIconBuilder {
             parent_hwnd: None,
             icon: Err(Error::IconMissing),
@@ -198,8 +191,25 @@ where
             on_click: None,
             on_double_click: None,
             on_right_click: None,
-            sender,
+            sender: None,
         }
+    }
+
+    pub fn with_sender(mut self, s: std::sync::mpsc::Sender<T>) -> Self {
+        self.sender = Some(TrayIconSender::Std(s));
+        self
+    }
+
+    #[cfg(feature = "winit")]
+    pub fn with_sender_winit(mut self, s: winit::event_loop::EventLoopProxy<T>) -> Self {
+        self.sender = Some(TrayIconSender::Winit(s));
+        self
+    }
+
+    #[cfg(feature = "crossbeam-channel")]
+    pub fn with_sender_crossbeam(mut self, s: crossbeam_channel::Sender<T>) -> Self {
+        self.sender = Some(TrayIconSender::Crossbeam(s));
+        self
     }
 
     pub fn with_click(mut self, event: T) -> Self {
@@ -234,10 +244,10 @@ where
 
     pub fn with_menu<F>(mut self, f: F) -> Self
     where
-        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>, //Result<sys::MenuSys<T>, Error>,
+        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>,
         T: PartialEq + Clone + 'static,
     {
-        self.menu = Some(f(MenuBuilder::new()).build());
+        self.menu = Some(f(MenuBuilder::new()));
         self
     }
 

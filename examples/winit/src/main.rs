@@ -32,7 +32,8 @@ fn main() {
     let first_icon = Icon::from_buffer(icon, None, None).unwrap();
 
     // Needlessly complicated tray icon with all the whistles and bells
-    let mut tray_icon = TrayIconBuilder::new(proxy)
+    let mut tray_icon = TrayIconBuilder::new()
+        .with_sender_winit(proxy)
         .with_icon_from_buffer(icon)
         .with_click(Events::ClickTrayIcon)
         .with_double_click(Events::DoubleClickTrayIcon)

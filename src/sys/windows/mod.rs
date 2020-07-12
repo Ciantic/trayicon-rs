@@ -35,13 +35,13 @@ where
     let parent_hwnd: Option<HWND> = builder.parent_hwnd.map(|h| h as HWND);
     let on_click = builder.on_click;
     let on_right_click = builder.on_right_click;
-    let sender = builder.sender;
+    let sender = builder.sender.ok_or(Error::SenderMissing)?;
     let on_double_click = builder.on_double_click;
     let notify_icon = NotifyIcon::new(hicon);
 
     // Try to get a popup menu
     if let Some(rhmenu) = builder.menu {
-        menu = Some(rhmenu?);
+        menu = Some(rhmenu.build()?);
     }
 
     Ok(TrayIconWindow::new(
