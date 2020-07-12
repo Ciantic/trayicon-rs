@@ -4,7 +4,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
+use trayicon::{Icon, MenuItem, TrayIcon, TrayIconBuilder};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum Events {
