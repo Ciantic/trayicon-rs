@@ -29,8 +29,8 @@ fn main() {
     let mut tray_icon = TrayIconBuilder::new()
         .with_sender(s)
         .with_icon_from_buffer(icon)
-        .with_click(Events::ClickTrayIcon)
-        .with_double_click(Events::DoubleClickTrayIcon)
+        .with_on_click(Events::ClickTrayIcon)
+        .with_on_double_click(Events::DoubleClickTrayIcon)
         .with_menu(
             MenuBuilder::new()
                 .with_item("Item 3 Replace Menu", Events::Item3)

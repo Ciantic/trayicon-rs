@@ -209,17 +209,17 @@ where
         self
     }
 
-    pub fn with_click(mut self, event: T) -> Self {
+    pub fn with_on_click(mut self, event: T) -> Self {
         self.on_click = Some(event);
         self
     }
 
-    pub fn with_double_click(mut self, event: T) -> Self {
+    pub fn with_on_double_click(mut self, event: T) -> Self {
         self.on_double_click = Some(event);
         self
     }
 
-    pub fn with_right_click(mut self, event: T) -> Self {
+    pub fn with_on_right_click(mut self, event: T) -> Self {
         self.on_right_click = Some(event);
         self
     }
