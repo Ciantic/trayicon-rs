@@ -42,9 +42,18 @@ impl NotifyIcon {
         res == 1
     }
 
+    pub fn remove(&mut self) -> bool {
+        let res = unsafe {
+            winapi::um::shellapi::Shell_NotifyIconW(winapi::um::shellapi::NIM_DELETE, &mut self.nid)
+        };
+        res == 1
+    }
+
     pub fn set_icon(&mut self, winhicon: &WinHIcon) -> bool {
-        let winhicon = winhicon.clone();
-        self.winhicon = winhicon;
+        if winhicon == &self.winhicon {
+            return true;
+        }
+        self.winhicon = winhicon.clone();
         self.nid.hIcon = self.winhicon.hicon;
         let res = unsafe {
             winapi::um::shellapi::Shell_NotifyIconW(winapi::um::shellapi::NIM_MODIFY, &mut self.nid)

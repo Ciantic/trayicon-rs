@@ -5,22 +5,14 @@ use winapi::um::winuser;
 
 /// Purpose of this struct is to keep hicon handle, and drop it when the struct
 /// is dropped
-#[derive(PartialEq)]
 pub struct WinHIcon {
     pub hicon: HICON,
+    pub buffer: Option<&'static [u8]>,
 }
 
 impl WinHIcon {
-    #[allow(clippy::new_without_default)]
-    #[allow(dead_code)]
-    pub fn new() -> WinHIcon {
-        WinHIcon {
-            hicon: unsafe { winuser::LoadIconW(std::ptr::null_mut(), winuser::IDI_APPLICATION) },
-        }
-    }
-
     pub fn from_buffer(
-        buffer: &[u8],
+        buffer: &'static [u8],
         width: Option<u32>,
         height: Option<u32>,
     ) -> Result<WinHIcon, Error> {
@@ -51,7 +43,10 @@ impl WinHIcon {
         if hicon.is_null() {
             return Err(Error::IconLoadingFailed);
         }
-        Ok(WinHIcon { hicon })
+        Ok(WinHIcon {
+            hicon,
+            buffer: Some(buffer),
+        })
     }
 }
 
@@ -59,7 +54,14 @@ impl Clone for WinHIcon {
     fn clone(&self) -> Self {
         WinHIcon {
             hicon: unsafe { winuser::CopyIcon(self.hicon) },
+            buffer: self.buffer,
         }
+    }
+}
+
+impl PartialEq for WinHIcon {
+    fn eq(&self, other: &Self) -> bool {
+        self.buffer == other.buffer
     }
 }
 

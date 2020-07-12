@@ -125,23 +125,6 @@ mod msgs {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use core::mem::MaybeUninit;
-    use winapi::um::winuser;
-
-    pub fn main_loop() {
-        loop {
-            unsafe {
-                let mut msg = MaybeUninit::uninit();
-                let bret = winuser::GetMessageA(msg.as_mut_ptr(), 0 as _, 0, 0);
-                if bret > 0 {
-                    winuser::TranslateMessage(msg.as_ptr());
-                    winuser::DispatchMessageA(msg.as_ptr());
-                } else {
-                    break;
-                }
-            }
-        }
-    }
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     enum Events {

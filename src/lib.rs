@@ -3,34 +3,53 @@
 
 use std::fmt::Debug;
 
+// cfg_if::cfg_if! {
+//     if #[cfg(feature = "winit")] {
+//         pub(crate) type TrayIconSender<T> = winit::event_loop::EventLoopProxy<T>;
+//     } else if #[cfg(feature = "crossbeam-channel")] {
+//         pub(crate) type TrayIconSender<T> = crossbeam_channel::Sender<T>;
+//     } else {
+//         pub(crate) type TrayIconSender<T> = std::sync::mpsc::Sender<T>;
+//     }
+// }
+
 #[cfg(target_os = "windows")]
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
-#[cfg(all(not(feature = "use-winit"), not(feature = "use-crossbeam-channel")))]
+#[cfg(all(not(feature = "winit"), not(feature = "crossbeam-channel")))]
 pub(crate) type TrayIconSender<T> = std::sync::mpsc::Sender<T>;
 
-#[cfg(feature = "use-winit")]
+#[cfg(feature = "winit")]
 pub(crate) type TrayIconSender<T> = winit::event_loop::EventLoopProxy<T>;
 
-#[cfg(feature = "use-crossbeam-channel")]
+#[cfg(feature = "crossbeam-channel")]
 pub(crate) type TrayIconSender<T> = crossbeam_channel::Sender<T>;
 
 pub(crate) fn send<T>(s: &TrayIconSender<T>, e: &T)
 where
     T: PartialEq + Clone + 'static,
 {
-    #[cfg(feature = "use-winit")]
+    // cfg_if::cfg_if! {
+    //     if #[cfg(feature = "winit")] {
+    //         let _ = s.send_event(e.clone());
+    //     } else if #[cfg(feature = "crossbeam-channel")] {
+    //         let _ = s.try_send(e.clone());
+    //     } else {
+    //         let _ = s.send(e.clone());
+    //     }
+    // }
+    #[cfg(feature = "winit")]
     let _ = s.send_event(e.clone());
 
-    #[cfg(feature = "use-crossbeam-channel")]
+    #[cfg(feature = "crossbeam-channel")]
     let _ = s.try_send(e.clone());
 
-    #[cfg(all(not(feature = "use-winit"), not(feature = "use-crossbeam-channel")))]
+    #[cfg(all(not(feature = "winit"), not(feature = "crossbeam-channel")))]
     let _ = s.send(e.clone());
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Icon(sys::IconSys);
 
 impl Debug for Icon {
@@ -49,7 +68,7 @@ impl Icon {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MenuItem<T>
 where
     T: PartialEq + Clone + 'static,
@@ -76,7 +95,7 @@ where
     },
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct MenuBuilder<T>
 where
     T: PartialEq + Clone + 'static,
@@ -222,7 +241,7 @@ where
         self
     }
 
-    pub fn build(self) -> Result<Box<impl TrayIcon<T>>, Error> {
+    pub fn build(self) -> Result<Box<impl TrayIcon<T> + Send + Sync>, Error> {
         Ok(sys::build_trayicon(self)?)
     }
 }
@@ -233,110 +252,8 @@ where
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-    enum Events {
-        ClickTrayIcon,
-        DoubleClickTrayIcon,
-        Exit,
-        Item1,
-        Item2,
-        Item3,
-        Item4,
-        CheckItem1,
-        SubItem1,
-        SubItem2,
-        SubItem3,
-        SubSubItem1,
-        SubSubItem2,
-        SubSubItem3,
-    }
-
-    #[test]
-    fn test_integration_test() {
-        #[cfg(feature = "use-crossbeam-channel")]
-        let (s, r) = crossbeam_channel::unbounded();
-
-        #[cfg(all(not(feature = "use-winit"), not(feature = "use-crossbeam-channel")))]
-        let (s, r) = std::sync::mpsc::channel::<Events>();
-
-        let icon = include_bytes!("./testresource/icon1.ico");
-        let icon2 = include_bytes!("./testresource/icon2.ico");
-
-        let second_icon = Icon::from_buffer(icon2, None, None).unwrap();
-        let first_icon = Icon::from_buffer(icon, None, None).unwrap();
-
-        let mut tray_icon = TrayIconBuilder::new(s)
-            .with_icon_from_buffer(icon)
-            .with_click(Events::ClickTrayIcon)
-            .with_double_click(Events::DoubleClickTrayIcon)
-            .with_menu(|menu| {
-                menu.with_checkable_item("This is checkable", true, Events::CheckItem1)
-                    .with_child_menu("Sub Menu", |menu| {
-                        menu.with_item("Sub item 1", Events::SubItem1)
-                            .with_item("Sub Item 2", Events::SubItem2)
-                            .with_item("Sub Item 3", Events::SubItem3)
-                            .with_child_menu("Sub Sub menu", |menu| {
-                                menu.with_item("Sub Sub item 1", Events::SubSubItem1)
-                                    .with_item("Sub Sub Item 2", Events::SubSubItem2)
-                                    .with_item("Sub Sub Item 3", Events::SubSubItem3)
-                            })
-                    })
-                    .with(MenuItem::Item {
-                        name: "Item Disabled".into(),
-                        disabled: true, // Disabled entry example
-                        event: Events::Item4,
-                        icon: None,
-                    })
-                    .with_item("Item 3 Replace Menu", Events::Item3)
-                    .with_item("Item 2 Change Icon Green", Events::Item2)
-                    .with_item("Item 1 Change Icon Red", Events::Item1)
-                    .with_separator()
-                    .with_item("E&xit", Events::Exit)
-            })
-            .build()
-            .unwrap();
-
-        std::thread::spawn(move || {
-            r.iter().for_each(|m| match m {
-                Events::DoubleClickTrayIcon => {
-                    println!("Double click");
-                }
-                Events::ClickTrayIcon => {
-                    println!("Single click");
-                }
-                Events::Exit => {
-                    println!("Please exit");
-                    #[cfg(target_os = "windows")]
-                    unsafe {
-                        winapi::um::winuser::PostQuitMessage(0);
-                    }
-                }
-                Events::Item1 => {
-                    tray_icon.set_icon(&second_icon).unwrap();
-                }
-                Events::Item2 => {
-                    tray_icon.set_icon(&first_icon).unwrap();
-                }
-                Events::Item3 => {
-                    tray_icon
-                        .set_menu(MenuBuilder::new().with_item("Exit", Events::Exit))
-                        .unwrap();
-                }
-                e => {
-                    println!("{:?}", e);
-                }
-            })
-        });
-
-        // This library does not provide main loop intentionally, this is up to
-        // user program to provide
-        #[cfg(target_os = "windows")]
-        sys::tests::main_loop()
-    }
+    // TODO: Maybe not implement these, instead use reactively set_menu
+    // fn set_item_check(&mut self, event: T, is_checked: bool) -> Result<(), Error>;
+    // fn set_item_disabled(&mut self, event: T, disabled: bool) -> Result<(), Error>;
 }

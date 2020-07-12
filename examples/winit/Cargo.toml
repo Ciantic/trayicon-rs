@@ -7,4 +7,4 @@ publish = false
 
 [dependencies]
 winit = "0.22.2"
-trayicon = { path = "../../", features = ["use-winit"] }
+trayicon = { path = "../../", features = ["winit"] }

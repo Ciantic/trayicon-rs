@@ -205,6 +205,11 @@ where
                 }
             }
 
+            // Destroy
+            winuser::WM_DESTROY => {
+                window.notify_icon.remove();
+            }
+
             // TaskbarCreated
             x if x == WM_TASKBARCREATED => {
                 window.notify_icon.add(hwnd);
@@ -229,6 +234,7 @@ where
         Ok(())
     }
 
+    /// Set menu
     fn set_menu(&mut self, menu: crate::MenuBuilder<T>) -> Result<(), Error> {
         let menu = menu.build()?;
         self.menu = Some(menu);
