@@ -25,22 +25,26 @@ fn main() {
     let second_icon = Icon::from_buffer(icon2, None, None).unwrap();
     let first_icon = Icon::from_buffer(icon, None, None).unwrap();
 
+    // Needlessly complicated tray icon with all the whistles and bells
     let mut tray_icon = TrayIconBuilder::new()
         .with_sender(s)
         .with_icon_from_buffer(icon)
         .with_click(Events::ClickTrayIcon)
         .with_double_click(Events::DoubleClickTrayIcon)
-        .with_menu(|menu| {
-            menu.with_item("Item 3 Replace Menu", Events::Item3)
+        .with_menu(
+            MenuBuilder::new()
+                .with_item("Item 3 Replace Menu", Events::Item3)
                 .with_item("Item 2 Change Icon Green", Events::Item2)
                 .with_item("Item 1 Change Icon Red", Events::Item1)
                 .with_separator()
                 .with_checkable_item("This is checkable", true, Events::CheckItem1)
-                .with_child_menu("Sub Menu", |menu| {
-                    menu.with_item("Sub item 1", Events::SubItem1)
+                .with_child_menu(
+                    "Sub Menu",
+                    MenuBuilder::new()
+                        .with_item("Sub item 1", Events::SubItem1)
                         .with_item("Sub Item 2", Events::SubItem2)
-                        .with_item("Sub Item 3", Events::SubItem3)
-                })
+                        .with_item("Sub Item 3", Events::SubItem3),
+                )
                 .with(MenuItem::Item {
                     name: "Item Disabled".into(),
                     disabled: true, // Disabled entry example
@@ -48,8 +52,8 @@ fn main() {
                     icon: None,
                 })
                 .with_separator()
-                .with_item("E&xit", Events::Exit)
-        })
+                .with_item("E&xit", Events::Exit),
+        )
         .build()
         .unwrap();
 
@@ -72,10 +76,11 @@ fn main() {
             }
             Events::Item3 => {
                 tray_icon
-                    .set_menu(|menu| {
-                        menu.with_item("New menu item", Events::Item1)
-                            .with_item("Exit", Events::Exit)
-                    })
+                    .set_menu(
+                        MenuBuilder::new()
+                            .with_item("New menu item", Events::Item1)
+                            .with_item("Exit", Events::Exit),
+                    )
                     .unwrap();
             }
             e => {

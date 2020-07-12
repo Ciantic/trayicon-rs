@@ -133,14 +133,10 @@ where
         self
     }
 
-    pub fn with_child_menu<F>(mut self, name: &str, f: F) -> Self
-    where
-        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>,
-    {
-        let sub = MenuBuilder::new();
+    pub fn with_child_menu(mut self, name: &str, menu: MenuBuilder<T>) -> Self {
         self.menu_items.push(MenuItem::ChildMenu {
             name: name.to_string(),
-            children: f(sub),
+            children: menu,
             disabled: false,
             icon: None,
         });
@@ -242,12 +238,11 @@ where
         self
     }
 
-    pub fn with_menu<F>(mut self, f: F) -> Self
+    pub fn with_menu(mut self, menu: MenuBuilder<T>) -> Self
     where
-        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>,
         T: PartialEq + Clone + 'static,
     {
-        self.menu = Some(f(MenuBuilder::new()));
+        self.menu = Some(menu);
         self
     }
 
@@ -261,10 +256,7 @@ where
     T: PartialEq + Clone + 'static,
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
-    // fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
-    fn set_menu<F>(&mut self, f: F) -> Result<(), Error>
-    where
-        F: FnOnce(MenuBuilder<T>) -> MenuBuilder<T>;
+    fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
 
     // TODO: Maybe not implement these, instead use reactively set_menu
     // fn set_item_check(&mut self, event: T, is_checked: bool) -> Result<(), Error>;

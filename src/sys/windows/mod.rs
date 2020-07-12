@@ -143,17 +143,21 @@ pub(crate) mod tests {
     fn test_menu_build() {
         let builder = MenuBuilder::new()
             .with_checkable_item("This is checkable", true, Events::CheckableItem1)
-            .with_child_menu("Sub Menu", |menu| {
-                menu.with_item("Sub item 1", Events::SubItem1)
+            .with_child_menu(
+                "Sub Menu",
+                MenuBuilder::new()
+                    .with_item("Sub item 1", Events::SubItem1)
                     .with_item("Sub Item 2", Events::SubItem2)
                     .with_item("Sub Item 3", Events::SubItem3)
-                    .with_child_menu("Sub Sub menu", |menu| {
-                        menu.with_item("Sub Sub item 1", Events::SubSubItem1)
+                    .with_child_menu(
+                        "Sub Sub menu",
+                        MenuBuilder::new()
+                            .with_item("Sub Sub item 1", Events::SubSubItem1)
                             .with_item("Sub Sub Item 2", Events::SubSubItem2)
-                            .with_item("Sub Sub Item 3", Events::SubSubItem3)
-                    })
-                    .with_item("Sub Item 4", Events::SubItem4)
-            })
+                            .with_item("Sub Sub Item 3", Events::SubSubItem3),
+                    )
+                    .with_item("Sub Item 4", Events::SubItem4),
+            )
             .with_item("Item 1", Events::Item1);
 
         if let Ok(menusys) = build_menu(builder) {
