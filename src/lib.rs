@@ -319,7 +319,7 @@ where
         TrayIcon { builder, sys }
     }
 
-    // Set the icon if changed
+    /// Set the icon if changed
     pub fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
         if let Ok(old_icon) = &self.builder.icon {
             if old_icon == icon {
@@ -340,6 +340,16 @@ where
         self.builder.menu = Some(menu.clone());
         self.sys.set_menu(&menu)
     }
+
+    // TODO: I think following are redundant, one could do reactively following and more with set_menu, but perhaps someone doesn't care about reactive way?
+
+    // pub fn set_check(&mut self, is_checked: bool, event: T) -> bool {
+    //     true
+    // }
+
+    // pub fn set_disabled(&mut self, disabled: bool, event: T) -> bool {
+    //     true
+    // }
 }
 
 unsafe impl<T> Sync for TrayIcon<T> where T: PartialEq + Clone + 'static {}
