@@ -140,13 +140,13 @@ pub(crate) mod tests {
         let cond = false;
         let builder = MenuBuilder::new()
             .checkable("This is checkable", true, Events::CheckableItem1)
-            .child_menu(
+            .menu(
                 "Sub Menu",
                 MenuBuilder::new()
                     .item("Sub item 1", Events::SubItem1)
                     .item("Sub Item 2", Events::SubItem2)
                     .item("Sub Item 3", Events::SubItem3)
-                    .child_menu(
+                    .menu(
                         "Sub Sub menu",
                         MenuBuilder::new()
                             .item("Sub Sub item 1", Events::SubSubItem1)
