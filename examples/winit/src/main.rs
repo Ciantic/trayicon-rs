@@ -23,7 +23,7 @@ enum Events {
 
 fn main() {
     let event_loop = EventLoop::<Events>::with_user_event();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
+    let your_app_window = WindowBuilder::new().build(&event_loop).unwrap();
     let proxy = event_loop.create_proxy();
     let icon = include_bytes!("../../../src/testresource/icon1.ico");
     let icon2 = include_bytes!("../../../src/testresource/icon2.ico");
@@ -67,10 +67,11 @@ fn main() {
         *control_flow = ControlFlow::Wait;
 
         match event {
+            // Main window events
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 window_id,
-            } if window_id == window.id() => *control_flow = ControlFlow::Exit,
+            } if window_id == your_app_window.id() => *control_flow = ControlFlow::Exit,
 
             // User events
             Event::UserEvent(e) => match e {
