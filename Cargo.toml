@@ -1,6 +1,6 @@
 [package]
 name = "trayicon"
-version = "0.1.0-beta.11"
+version = "0.1.0-beta.12"
 authors = ["Jari Otto Oskari Pennanen <ciantic@oksidi.com>"]
 edition = "2018"
 description = "Tray Icon, that thing in the corner"

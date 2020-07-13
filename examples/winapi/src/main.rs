@@ -37,7 +37,7 @@ fn main() {
                 .item("Item 2 Change Icon Green", Events::Item2)
                 .item("Item 1 Change Icon Red", Events::Item1)
                 .separator()
-                .checkable_item("This is checkable", true, Events::CheckItem1)
+                .checkable("This is checkable", true, Events::CheckItem1)
                 .child_menu(
                     "Sub Menu",
                     MenuBuilder::new()

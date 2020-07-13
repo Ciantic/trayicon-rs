@@ -150,7 +150,7 @@ where
         self
     }
 
-    pub fn checkable_item(mut self, name: &str, is_checked: bool, on_click: T) -> Self {
+    pub fn checkable(mut self, name: &str, is_checked: bool, on_click: T) -> Self {
         self.menu_items.push(MenuItem::CheckableItem {
             name: name.to_string(),
             is_checked,
