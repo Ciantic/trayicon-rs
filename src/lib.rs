@@ -158,7 +158,7 @@ where
         self
     }
 
-    pub(crate) fn build(self) -> Result<sys::MenuSys<T>, Error> {
+    pub(crate) fn build(&self) -> Result<crate::sys::MenuSys<T>, Error> {
         sys::build_menu(self)
     }
 }
@@ -289,7 +289,7 @@ where
             }
         }
         self.builder.icon = Ok(icon.clone());
-        self.sys.set_icon(icon.clone())
+        self.sys.set_icon(&icon)
     }
 
     /// Set the menu if changed
@@ -299,7 +299,8 @@ where
                 return Ok(());
             }
         }
-        self.sys.set_menu(menu.clone())
+        self.builder.menu = Some(menu.clone());
+        self.sys.set_menu(&menu)
     }
 }
 
@@ -312,6 +313,6 @@ pub(crate) trait TrayIconBase<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    fn set_icon(&mut self, icon: Icon) -> Result<(), Error>;
-    fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
+    fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
+    fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;
 }

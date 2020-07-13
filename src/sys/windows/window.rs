@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{Error, Icon, TrayIconBase, TrayIconSender};
+use crate::{Error, Icon, MenuBuilder, TrayIconBase, TrayIconSender};
 use std::fmt::Debug;
 use winapi::um::commctrl;
 
@@ -227,7 +227,7 @@ where
     T: PartialEq + Clone + 'static,
 {
     /// Set icon
-    fn set_icon(&mut self, icon: Icon) -> Result<(), Error> {
+    fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
         if !self.notify_icon.set_icon(&icon.sys) {
             return Err(Error::IconLoadingFailed);
         }
@@ -235,7 +235,7 @@ where
     }
 
     /// Set menu
-    fn set_menu(&mut self, menu: crate::MenuBuilder<T>) -> Result<(), Error> {
+    fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error> {
         if menu.menu_items.is_empty() {
             self.menu = None
         } else {

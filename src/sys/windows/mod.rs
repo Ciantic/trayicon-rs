@@ -53,7 +53,7 @@ where
 }
 
 /// Build the menu from Windows HMENU
-pub fn build_menu<T>(builder: MenuBuilder<T>) -> Result<MenuSys<T>, Error>
+pub fn build_menu<T>(builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -65,13 +65,13 @@ where
 ///
 /// Having a j value as mutable reference it's capable of handling nested
 /// submenus
-fn build_menu_inner<T>(j: &mut usize, mut builder: MenuBuilder<T>) -> Result<MenuSys<T>, Error>
+fn build_menu_inner<T>(j: &mut usize, builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
     T: PartialEq + Clone + 'static,
 {
     let mut hmenu = WinHMenu::new();
     let mut map: HashMap<usize, T> = HashMap::new();
-    builder.menu_items.drain(0..).for_each(|item| match item {
+    builder.menu_items.iter().for_each(|item| match item {
         MenuItem::ChildMenu {
             name,
             children,
@@ -80,7 +80,7 @@ where
         } => {
             if let Ok(menusys) = build_menu_inner(j, children) {
                 map.extend(menusys.events.into_iter());
-                hmenu.add_child_menu(&name, menusys.menu, disabled);
+                hmenu.add_child_menu(&name, menusys.menu, *disabled);
             }
         }
         MenuItem::CheckableItem {
@@ -91,8 +91,8 @@ where
             ..
         } => {
             *j += 1;
-            map.insert(*j, event);
-            hmenu.add_checkable_item(&name, is_checked, *j, disabled);
+            map.insert(*j, event.clone());
+            hmenu.add_checkable_item(&name, *is_checked, *j, *disabled);
         }
         MenuItem::Item {
             name,
@@ -101,8 +101,8 @@ where
             ..
         } => {
             *j += 1;
-            map.insert(*j, event);
-            hmenu.add_menu_item(&name, *j, disabled);
+            map.insert(*j, event.clone());
+            hmenu.add_menu_item(&name, *j, *disabled);
         }
         MenuItem::Separator => hmenu.add_separator(),
     });
@@ -157,7 +157,7 @@ pub(crate) mod tests {
             )
             .with_item("Item 1", Events::Item1);
 
-        if let Ok(menusys) = build_menu(builder) {
+        if let Ok(menusys) = build_menu(&builder) {
             assert_eq!(menusys.events.len(), 9);
         } else {
             panic!()
