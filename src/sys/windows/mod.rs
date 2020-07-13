@@ -71,7 +71,7 @@ where
     let mut hmenu = WinHMenu::new();
     let mut map: HashMap<usize, T> = HashMap::new();
     builder.menu_items.iter().for_each(|item| match item {
-        MenuItem::ChildMenu {
+        MenuItem::Submenu {
             name,
             children,
             disabled,
@@ -82,7 +82,7 @@ where
                 hmenu.add_child_menu(&name, menusys.menu, *disabled);
             }
         }
-        MenuItem::CheckableItem {
+        MenuItem::Checkable {
             name,
             is_checked,
             event,

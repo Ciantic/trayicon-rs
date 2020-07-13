@@ -86,14 +86,14 @@ where
         disabled: bool,
         icon: Option<Icon>,
     },
-    CheckableItem {
+    Checkable {
         name: String,
         is_checked: bool,
         event: T,
         disabled: bool,
         icon: Option<Icon>,
     },
-    ChildMenu {
+    Submenu {
         name: String,
         children: MenuBuilder<T>,
         disabled: bool,
@@ -151,7 +151,7 @@ where
     }
 
     pub fn checkable(mut self, name: &str, is_checked: bool, on_click: T) -> Self {
-        self.menu_items.push(MenuItem::CheckableItem {
+        self.menu_items.push(MenuItem::Checkable {
             name: name.to_string(),
             is_checked,
             event: on_click,
@@ -162,7 +162,7 @@ where
     }
 
     pub fn submenu(mut self, name: &str, menu: MenuBuilder<T>) -> Self {
-        self.menu_items.push(MenuItem::ChildMenu {
+        self.menu_items.push(MenuItem::Submenu {
             name: name.to_string(),
             children: menu,
             disabled: false,
