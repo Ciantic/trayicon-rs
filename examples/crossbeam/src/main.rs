@@ -77,7 +77,7 @@ fn main() {
             Events::Item3 => {
                 tray_icon
                     .set_menu(
-                        MenuBuilder::new()
+                        &MenuBuilder::new()
                             .with_item("New menu item", Events::Item1)
                             .with_item("Exit", Events::Exit),
                     )

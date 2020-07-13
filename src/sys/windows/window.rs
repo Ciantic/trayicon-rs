@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{Error, Icon, TrayIcon, TrayIconSender};
+use crate::{Error, Icon, TrayIcon, TrayIconBase, TrayIconSender};
 use std::fmt::Debug;
 use winapi::um::commctrl;
 
@@ -222,11 +222,12 @@ where
     }
 }
 
-impl<T> TrayIcon<T> for TrayIconWindow<T>
+impl<T> TrayIconBase<T> for TrayIconWindow<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
+    /// Set icon
+    fn set_icon(&mut self, icon: Icon) -> Result<(), Error> {
         if !self.notify_icon.set_icon(&icon.0) {
             return Err(Error::IconLoadingFailed);
         }
@@ -238,8 +239,7 @@ where
         if menu.menu_items.is_empty() {
             self.menu = None
         } else {
-            let menu = menu.build()?;
-            self.menu = Some(menu);
+            self.menu = Some(menu.build()?);
         }
         Ok(())
     }

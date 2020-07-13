@@ -4,7 +4,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
+use trayicon::{Icon, MenuBuilder, MenuItem, TrayIconBuilder};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum Events {
@@ -85,7 +85,7 @@ fn main() {
                 Events::Item3 => {
                     tray_icon
                         .set_menu(
-                            MenuBuilder::new()
+                            &MenuBuilder::new()
                                 .with_item("New menu item", Events::Item1)
                                 .with_item("Exit", Events::Exit),
                         )

@@ -242,22 +242,64 @@ where
         self
     }
 
-    pub fn build(self) -> Result<Box<impl TrayIcon<T> + Send + Sync>, Error> {
-        Ok(sys::build_trayicon(self)?)
+    pub fn build(self) -> Result<TrayIcon<T>, Error> {
+        Ok(TrayIcon::new(
+            self.clone(),
+            crate::sys::build_trayicon(self)?,
+        ))
     }
 }
 
-pub trait TrayIcon<T>
+pub struct TrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    /// Set the icon
-    fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
+    sys: Box<crate::sys::TrayIconSys<T>>,
+    builder: TrayIconBuilder<T>,
+}
 
-    /// Set the menu
+impl<T> TrayIcon<T>
+where
+    T: PartialEq + Clone + 'static,
+{
+    pub(crate) fn new(
+        builder: TrayIconBuilder<T>,
+        sys: Box<crate::sys::TrayIconSys<T>>,
+    ) -> TrayIcon<T> {
+        TrayIcon { builder, sys }
+    }
+
+    // Set the icon if changed
+    pub fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
+        if let Ok(old_icon) = &self.builder.icon {
+            if old_icon == icon {
+                return Ok(());
+            }
+        }
+        self.builder.icon = Ok(icon.clone());
+        self.sys.set_icon(icon.clone())
+    }
+
+    /// Set the menu if changed
+    pub fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error> {
+        if let Some(old_menu) = &self.builder.menu {
+            if old_menu == menu {
+                return Ok(());
+            }
+        }
+        self.sys.set_menu(menu.clone())
+    }
+}
+
+unsafe impl<T> Sync for TrayIcon<T> where T: PartialEq + Clone + 'static {}
+
+unsafe impl<T> Send for TrayIcon<T> where T: PartialEq + Clone + 'static {}
+
+/// This is just helper for Sys packages, not an enforcement through generics
+pub(crate) trait TrayIconBase<T>
+where
+    T: PartialEq + Clone + 'static,
+{
+    fn set_icon(&mut self, icon: Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error>;
-
-    // TODO: Maybe not implement these, instead use reactively set_menu
-    // fn set_item_check(&mut self, event: T, is_checked: bool) -> Result<(), Error>;
-    // fn set_item_disabled(&mut self, event: T, disabled: bool) -> Result<(), Error>;
 }

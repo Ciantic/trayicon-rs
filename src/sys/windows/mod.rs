@@ -25,7 +25,7 @@ where
 }
 
 /// Build the tray icon
-pub fn build_trayicon<T>(builder: TrayIconBuilder<T>) -> Result<Box<TrayIconSys<T>>, Error>
+pub fn build_trayicon<T>(builder: TrayIconBuilder<T>) -> Result<Box<TrayIconWindow<T>>, Error>
 where
     T: PartialEq + Clone + 'static,
 {
