@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use window::TrayIconWindow;
 
 use crate::{Error, MenuBuilder, MenuItem, TrayIconBuilder};
-use hicon::WinHIcon;
 use hmenu::WinHMenu;
 use notifyicon::NotifyIcon;
 
@@ -25,20 +24,20 @@ where
 }
 
 /// Build the tray icon
-pub fn build_trayicon<T>(builder: TrayIconBuilder<T>) -> Result<Box<TrayIconWindow<T>>, Error>
+pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<Box<TrayIconWindow<T>>, Error>
 where
     T: PartialEq + Clone + 'static,
 {
     let mut menu: Option<MenuSys<T>> = None;
-    let hicon: WinHIcon = builder.icon?.sys;
-    let on_click = builder.on_click;
-    let on_right_click = builder.on_right_click;
-    let sender = builder.sender.ok_or(Error::SenderMissing)?;
-    let on_double_click = builder.on_double_click;
+    let hicon = &builder.icon.as_ref()?.sys;
+    let on_click = builder.on_click.clone();
+    let on_right_click = builder.on_right_click.clone();
+    let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
+    let on_double_click = builder.on_double_click.clone();
     let notify_icon = NotifyIcon::new(hicon);
 
     // Try to get a popup menu
-    if let Some(rhmenu) = builder.menu {
+    if let Some(rhmenu) = &builder.menu {
         menu = Some(rhmenu.build()?);
     }
 
@@ -138,24 +137,32 @@ pub(crate) mod tests {
 
     #[test]
     fn test_menu_build() {
+        let cond = false;
         let builder = MenuBuilder::new()
-            .with_checkable_item("This is checkable", true, Events::CheckableItem1)
-            .with_child_menu(
+            .checkable_item("This is checkable", true, Events::CheckableItem1)
+            .child_menu(
                 "Sub Menu",
                 MenuBuilder::new()
-                    .with_item("Sub item 1", Events::SubItem1)
-                    .with_item("Sub Item 2", Events::SubItem2)
-                    .with_item("Sub Item 3", Events::SubItem3)
-                    .with_child_menu(
+                    .item("Sub item 1", Events::SubItem1)
+                    .item("Sub Item 2", Events::SubItem2)
+                    .item("Sub Item 3", Events::SubItem3)
+                    .child_menu(
                         "Sub Sub menu",
                         MenuBuilder::new()
-                            .with_item("Sub Sub item 1", Events::SubSubItem1)
-                            .with_item("Sub Sub Item 2", Events::SubSubItem2)
-                            .with_item("Sub Sub Item 3", Events::SubSubItem3),
+                            .item("Sub Sub item 1", Events::SubSubItem1)
+                            .item("Sub Sub Item 2", Events::SubSubItem2)
+                            .item("Sub Sub Item 3", Events::SubSubItem3),
                     )
-                    .with_item("Sub Item 4", Events::SubItem4),
+                    .when(|f| {
+                        if cond {
+                            f.item("Foo", Events::Item1)
+                        } else {
+                            f
+                        }
+                    })
+                    .item("Sub Item 4", Events::SubItem4),
             )
-            .with_item("Item 1", Events::Item1);
+            .item("Item 1", Events::Item1);
 
         if let Ok(menusys) = build_menu(&builder) {
             assert_eq!(menusys.events.len(), 9);

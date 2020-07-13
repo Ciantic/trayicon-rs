@@ -10,13 +10,13 @@ pub struct NotifyIcon {
 }
 
 impl NotifyIcon {
-    pub fn new(winhicon: WinHIcon) -> NotifyIcon {
+    pub fn new(winhicon: &WinHIcon) -> NotifyIcon {
         static mut ICON_ID: u32 = 1000;
         unsafe {
             ICON_ID += 1;
         }
         let mut icon = NotifyIcon {
-            winhicon,
+            winhicon: winhicon.clone(),
             nid: unsafe { std::mem::zeroed() },
             tooltip: unsafe { std::mem::zeroed() },
         };

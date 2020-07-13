@@ -27,23 +27,23 @@ fn main() {
 
     // Needlessly complicated tray icon with all the whistles and bells
     let mut tray_icon = TrayIconBuilder::new()
-        .with_sender_crossbeam(s)
-        .with_icon_from_buffer(icon)
-        .with_on_click(Events::ClickTrayIcon)
-        .with_on_double_click(Events::DoubleClickTrayIcon)
-        .with_menu(
+        .sender_crossbeam(s)
+        .icon_from_buffer(icon)
+        .on_click(Events::ClickTrayIcon)
+        .on_double_click(Events::DoubleClickTrayIcon)
+        .menu(
             MenuBuilder::new()
-                .with_item("Item 3 Replace Menu", Events::Item3)
-                .with_item("Item 2 Change Icon Green", Events::Item2)
-                .with_item("Item 1 Change Icon Red", Events::Item1)
-                .with_separator()
-                .with_checkable_item("This is checkable", true, Events::CheckItem1)
-                .with_child_menu(
+                .item("Item 3 Replace Menu", Events::Item3)
+                .item("Item 2 Change Icon Green", Events::Item2)
+                .item("Item 1 Change Icon Red", Events::Item1)
+                .separator()
+                .checkable_item("This is checkable", true, Events::CheckItem1)
+                .child_menu(
                     "Sub Menu",
                     MenuBuilder::new()
-                        .with_item("Sub item 1", Events::SubItem1)
-                        .with_item("Sub Item 2", Events::SubItem2)
-                        .with_item("Sub Item 3", Events::SubItem3),
+                        .item("Sub item 1", Events::SubItem1)
+                        .item("Sub Item 2", Events::SubItem2)
+                        .item("Sub Item 3", Events::SubItem3),
                 )
                 .with(MenuItem::Item {
                     name: "Item Disabled".into(),
@@ -51,8 +51,8 @@ fn main() {
                     event: Events::Item4,
                     icon: None,
                 })
-                .with_separator()
-                .with_item("E&xit", Events::Exit),
+                .separator()
+                .item("E&xit", Events::Exit),
         )
         .build()
         .unwrap();
@@ -78,8 +78,8 @@ fn main() {
                 tray_icon
                     .set_menu(
                         &MenuBuilder::new()
-                            .with_item("New menu item", Events::Item1)
-                            .with_item("Exit", Events::Exit),
+                            .item("New menu item", Events::Item1)
+                            .item("Exit", Events::Exit),
                     )
                     .unwrap();
             }

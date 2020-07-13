@@ -109,6 +109,11 @@ where
     menu_items: Vec<MenuItem<T>>,
 }
 
+/// Menu Builder
+///
+/// This is defined as consuming builder, could be converted to non-consuming
+/// one. This builder includes conditional helper `when` for composing
+/// conditionally some items.
 impl<T> MenuBuilder<T>
 where
     T: PartialEq + Clone + 'static,
@@ -117,17 +122,25 @@ where
         MenuBuilder { menu_items: vec![] }
     }
 
+    /// Conditionally include items, poor mans function composition
+    pub fn when<F>(self, f: F) -> Self
+    where
+        F: FnOnce(Self) -> Self,
+    {
+        f(self)
+    }
+
     pub fn with(mut self, item: MenuItem<T>) -> Self {
         self.menu_items.push(item);
         self
     }
 
-    pub fn with_separator(mut self) -> Self {
+    pub fn separator(mut self) -> Self {
         self.menu_items.push(MenuItem::Separator);
         self
     }
 
-    pub fn with_item(mut self, name: &str, on_click: T) -> Self {
+    pub fn item(mut self, name: &str, on_click: T) -> Self {
         self.menu_items.push(MenuItem::Item {
             name: name.to_string(),
             event: on_click,
@@ -137,7 +150,7 @@ where
         self
     }
 
-    pub fn with_checkable_item(mut self, name: &str, is_checked: bool, on_click: T) -> Self {
+    pub fn checkable_item(mut self, name: &str, is_checked: bool, on_click: T) -> Self {
         self.menu_items.push(MenuItem::CheckableItem {
             name: name.to_string(),
             is_checked,
@@ -148,7 +161,7 @@ where
         self
     }
 
-    pub fn with_child_menu(mut self, name: &str, menu: MenuBuilder<T>) -> Self {
+    pub fn child_menu(mut self, name: &str, menu: MenuBuilder<T>) -> Self {
         self.menu_items.push(MenuItem::ChildMenu {
             name: name.to_string(),
             children: menu,
@@ -163,6 +176,18 @@ where
     }
 }
 
+/// Tray Icon builder
+///
+/// Start by choosing an event sender implementation. There are three different
+/// senders depending on the optional features. By default the sender function
+/// uses `std::sync::mpsc::Sender<T>`, additionally if `winit` feature is
+/// enabled you can choose to use `winit::event_loop::EventLoopProxy<T>` or with
+/// `crossbeam` feature the `crossbeam_channel::Sender<T>` is available.
+///
+/// This is defined as consuming builder, this includes conditional helper
+/// `when` for composing conditionally some settings.
+///
+/// [Open full example with winit here 🢅](https://github.com/Ciantic/trayicon-rs/blob/master/examples/winit/src/main.rs)
 #[derive(Debug, Clone)]
 pub struct TrayIconBuilder<T>
 where
@@ -178,12 +203,18 @@ where
     sender: Option<TrayIconSender<T>>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Error {
     IconLoadingFailed,
     SenderMissing,
     IconMissing,
     OsError,
+}
+
+impl From<&Error> for Error {
+    fn from(e: &Error) -> Self {
+        *e
+    }
 }
 
 impl<T> TrayIconBuilder<T>
@@ -204,49 +235,59 @@ where
         }
     }
 
-    pub fn with_sender(mut self, s: std::sync::mpsc::Sender<T>) -> Self {
+    /// Conditionally include items, poor mans function composition
+    pub fn when<F>(self, f: F) -> Self
+    where
+        F: FnOnce(Self) -> Self,
+    {
+        f(self)
+    }
+
+    pub fn sender(mut self, s: std::sync::mpsc::Sender<T>) -> Self {
         self.sender = Some(TrayIconSender::Std(s));
         self
     }
 
+    /// Optional feature, requires `winit` feature
     #[cfg(feature = "winit")]
-    pub fn with_sender_winit(mut self, s: winit::event_loop::EventLoopProxy<T>) -> Self {
+    pub fn sender_winit(mut self, s: winit::event_loop::EventLoopProxy<T>) -> Self {
         self.sender = Some(TrayIconSender::Winit(s));
         self
     }
 
+    /// Optional feature, requires `crossbeam-channel` feature
     #[cfg(feature = "crossbeam-channel")]
-    pub fn with_sender_crossbeam(mut self, s: crossbeam_channel::Sender<T>) -> Self {
+    pub fn sender_crossbeam(mut self, s: crossbeam_channel::Sender<T>) -> Self {
         self.sender = Some(TrayIconSender::Crossbeam(s));
         self
     }
 
-    pub fn with_on_click(mut self, event: T) -> Self {
+    pub fn on_click(mut self, event: T) -> Self {
         self.on_click = Some(event);
         self
     }
 
-    pub fn with_on_double_click(mut self, event: T) -> Self {
+    pub fn on_double_click(mut self, event: T) -> Self {
         self.on_double_click = Some(event);
         self
     }
 
-    pub fn with_on_right_click(mut self, event: T) -> Self {
+    pub fn on_right_click(mut self, event: T) -> Self {
         self.on_right_click = Some(event);
         self
     }
 
-    pub fn with_icon(mut self, icon: Icon) -> Self {
+    pub fn icon(mut self, icon: Icon) -> Self {
         self.icon = Ok(icon);
         self
     }
 
-    pub fn with_icon_from_buffer(mut self, buffer: &'static [u8]) -> Self {
+    pub fn icon_from_buffer(mut self, buffer: &'static [u8]) -> Self {
         self.icon = Icon::from_buffer(buffer, None, None);
         self
     }
 
-    pub fn with_menu(mut self, menu: MenuBuilder<T>) -> Self
+    pub fn menu(mut self, menu: MenuBuilder<T>) -> Self
     where
         T: PartialEq + Clone + 'static,
     {
@@ -255,10 +296,7 @@ where
     }
 
     pub fn build(self) -> Result<TrayIcon<T>, Error> {
-        Ok(TrayIcon::new(
-            self.clone(),
-            crate::sys::build_trayicon(self)?,
-        ))
+        Ok(TrayIcon::new(crate::sys::build_trayicon(&self)?, self))
     }
 }
 
@@ -275,8 +313,8 @@ where
     T: PartialEq + Clone + 'static,
 {
     pub(crate) fn new(
-        builder: TrayIconBuilder<T>,
         sys: Box<crate::sys::TrayIconSys<T>>,
+        builder: TrayIconBuilder<T>,
     ) -> TrayIcon<T> {
         TrayIcon { builder, sys }
     }
