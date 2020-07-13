@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{Error, Icon, TrayIcon, TrayIconBase, TrayIconSender};
+use crate::{Error, Icon, TrayIconBase, TrayIconSender};
 use std::fmt::Debug;
 use winapi::um::commctrl;
 
@@ -228,7 +228,7 @@ where
 {
     /// Set icon
     fn set_icon(&mut self, icon: Icon) -> Result<(), Error> {
-        if !self.notify_icon.set_icon(&icon.0) {
+        if !self.notify_icon.set_icon(&icon.sys) {
             return Err(Error::IconLoadingFailed);
         }
         Ok(())

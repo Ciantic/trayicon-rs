@@ -50,9 +50,6 @@ impl NotifyIcon {
     }
 
     pub fn set_icon(&mut self, winhicon: &WinHIcon) -> bool {
-        if winhicon == &self.winhicon {
-            return true;
-        }
         self.winhicon = winhicon.clone();
         self.nid.hIcon = self.winhicon.hicon;
         let res = unsafe {

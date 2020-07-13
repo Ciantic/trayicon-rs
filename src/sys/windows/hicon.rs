@@ -7,7 +7,6 @@ use winapi::um::winuser;
 /// is dropped
 pub struct WinHIcon {
     pub hicon: HICON,
-    pub buffer: Option<&'static [u8]>,
 }
 
 impl WinHIcon {
@@ -43,10 +42,7 @@ impl WinHIcon {
         if hicon.is_null() {
             return Err(Error::IconLoadingFailed);
         }
-        Ok(WinHIcon {
-            hicon,
-            buffer: Some(buffer),
-        })
+        Ok(WinHIcon { hicon })
     }
 }
 
@@ -54,14 +50,7 @@ impl Clone for WinHIcon {
     fn clone(&self) -> Self {
         WinHIcon {
             hicon: unsafe { winuser::CopyIcon(self.hicon) },
-            buffer: self.buffer,
         }
-    }
-}
-
-impl PartialEq for WinHIcon {
-    fn eq(&self, other: &Self) -> bool {
-        self.buffer == other.buffer
     }
 }
 

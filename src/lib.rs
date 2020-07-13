@@ -43,8 +43,11 @@ where
     }
 }
 
-#[derive(Clone, PartialEq)]
-pub struct Icon(sys::IconSys);
+#[derive(Clone)]
+pub struct Icon {
+    buffer: Option<&'static [u8]>,
+    sys: sys::IconSys,
+}
 
 impl Debug for Icon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -58,7 +61,16 @@ impl Icon {
         width: Option<u32>,
         height: Option<u32>,
     ) -> Result<Icon, Error> {
-        sys::IconSys::from_buffer(buffer, width, height).map(Icon)
+        Ok(Icon {
+            buffer: Some(buffer),
+            sys: sys::IconSys::from_buffer(buffer, width, height)?,
+        })
+    }
+}
+
+impl PartialEq for Icon {
+    fn eq(&self, other: &Self) -> bool {
+        self.buffer == other.buffer
     }
 }
 

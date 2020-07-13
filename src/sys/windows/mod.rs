@@ -30,7 +30,7 @@ where
     T: PartialEq + Clone + 'static,
 {
     let mut menu: Option<MenuSys<T>> = None;
-    let hicon: WinHIcon = builder.icon?.0;
+    let hicon: WinHIcon = builder.icon?.sys;
     let on_click = builder.on_click;
     let on_right_click = builder.on_right_click;
     let sender = builder.sender.ok_or(Error::SenderMissing)?;
