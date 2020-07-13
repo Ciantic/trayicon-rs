@@ -44,7 +44,7 @@ fn main() {
                 .item("Item 1 Change Icon Red", Events::Item1)
                 .separator()
                 .checkable("This is checkable", true, Events::CheckItem1)
-                .menu(
+                .submenu(
                     "Sub Menu",
                     MenuBuilder::new()
                         .item("Sub item 1", Events::SubItem1)

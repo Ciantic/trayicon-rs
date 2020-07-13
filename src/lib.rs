@@ -161,7 +161,7 @@ where
         self
     }
 
-    pub fn menu(mut self, name: &str, menu: MenuBuilder<T>) -> Self {
+    pub fn submenu(mut self, name: &str, menu: MenuBuilder<T>) -> Self {
         self.menu_items.push(MenuItem::ChildMenu {
             name: name.to_string(),
             children: menu,
