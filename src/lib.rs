@@ -344,7 +344,12 @@ where
         self.sys.set_menu(menu)
     }
 
+    /// Set the tooltip if changed
     pub fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error> {
+        if self.builder.tooltip.as_deref() == Some(tooltip) {
+            return Ok(());
+        }
+        self.builder.tooltip = Some(tooltip.to_string());
         self.sys.set_tooltip(tooltip)
     }
 
