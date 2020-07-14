@@ -10,10 +10,14 @@ pub fn wchar(string: &str) -> Vec<u16> {
 /// Use this if winapi struct of certain size requires WCHAR array
 pub fn wchar_array(string: &str, dst: &mut [u16]) {
     let mut s = string.encode_utf16().collect::<Vec<_>>();
-    let len = dst.len() - 1;
-    s.truncate(len);
+
+    // Truncate utf16 array to fit in the buffer with null terminator
+    s.truncate(dst.len() - 1);
+
     dst[..s.len()].copy_from_slice(s.as_slice());
-    dst[s.len()] = 0; // Null terminator
+
+    // Null terminator
+    dst[s.len()] = 0;
 }
 
 #[cfg(test)]
