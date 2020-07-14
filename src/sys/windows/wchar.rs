@@ -1,6 +1,6 @@
 /// Returns wchar vector
 ///
-/// Usage with winapi: wchar("Foo").as_ptr() gives LPCTSTR
+/// Usage with winapi: wchar("Foo").as_ptr() gives LPCWSTR
 pub fn wchar(string: &str) -> Vec<u16> {
     format!("{}\0", string).encode_utf16().collect::<Vec<_>>()
 }
