@@ -57,7 +57,7 @@ fn main() {
                 .with(MenuItem::Item {
                     name: "Item Disabled".into(),
                     disabled: true, // Disabled entry example
-                    event: Events::DisabledItem1,
+                    id: Events::DisabledItem1,
                     icon: None,
                 })
                 .separator()

@@ -20,7 +20,7 @@ pub struct MenuSys<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    events: HashMap<usize, T>,
+    ids: HashMap<usize, T>,
     menu: WinHMenu,
 }
 
@@ -74,42 +74,47 @@ where
     let mut map: HashMap<usize, T> = HashMap::new();
     builder.menu_items.iter().for_each(|item| match item {
         MenuItem::Submenu {
+            id,
             name,
             children,
             disabled,
             ..
         } => {
+            if let Some(id) = id {
+                *j += 1;
+                map.insert(*j, id.clone());
+            }
             if let Ok(menusys) = build_menu_inner(j, children) {
-                map.extend(menusys.events.into_iter());
+                map.extend(menusys.ids.into_iter());
                 hmenu.add_child_menu(&name, menusys.menu, *disabled);
             }
         }
+
         MenuItem::Checkable {
             name,
             is_checked,
-            event,
+            id,
             disabled,
             ..
         } => {
             *j += 1;
-            map.insert(*j, event.clone());
+            map.insert(*j, id.clone());
             hmenu.add_checkable_item(&name, *is_checked, *j, *disabled);
         }
+
         MenuItem::Item {
-            name,
-            event,
-            disabled,
-            ..
+            name, id, disabled, ..
         } => {
             *j += 1;
-            map.insert(*j, event.clone());
+            map.insert(*j, id.clone());
             hmenu.add_menu_item(&name, *j, *disabled);
         }
+
         MenuItem::Separator => hmenu.add_separator(),
     });
 
     Ok(MenuSys {
-        events: map,
+        ids: map,
         menu: hmenu,
     })
 }
@@ -167,7 +172,7 @@ pub(crate) mod tests {
             .item("Item 1", Events::Item1);
 
         if let Ok(menusys) = build_menu(&builder) {
-            assert_eq!(menusys.events.len(), 9);
+            assert_eq!(menusys.ids.len(), 9);
         } else {
             panic!()
         }

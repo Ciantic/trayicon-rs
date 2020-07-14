@@ -81,19 +81,20 @@ where
 {
     Separator,
     Item {
+        id: T,
         name: String,
-        event: T,
         disabled: bool,
         icon: Option<Icon>,
     },
     Checkable {
+        id: T,
         name: String,
         is_checked: bool,
-        event: T,
         disabled: bool,
         icon: Option<Icon>,
     },
     Submenu {
+        id: Option<T>,
         name: String,
         children: MenuBuilder<T>,
         disabled: bool,
@@ -140,21 +141,21 @@ where
         self
     }
 
-    pub fn item(mut self, name: &str, on_click: T) -> Self {
+    pub fn item(mut self, name: &str, id: T) -> Self {
         self.menu_items.push(MenuItem::Item {
+            id,
             name: name.to_string(),
-            event: on_click,
             disabled: false,
             icon: None,
         });
         self
     }
 
-    pub fn checkable(mut self, name: &str, is_checked: bool, on_click: T) -> Self {
+    pub fn checkable(mut self, name: &str, is_checked: bool, id: T) -> Self {
         self.menu_items.push(MenuItem::Checkable {
+            id,
             name: name.to_string(),
             is_checked,
-            event: on_click,
             disabled: false,
             icon: None,
         });
@@ -163,6 +164,7 @@ where
 
     pub fn submenu(mut self, name: &str, menu: MenuBuilder<T>) -> Self {
         self.menu_items.push(MenuItem::Submenu {
+            id: None,
             name: name.to_string(),
             children: menu,
             disabled: false,
@@ -269,18 +271,18 @@ where
         self
     }
 
-    pub fn on_click(mut self, event: T) -> Self {
-        self.on_click = Some(event);
+    pub fn on_click(mut self, id: T) -> Self {
+        self.on_click = Some(id);
         self
     }
 
-    pub fn on_double_click(mut self, event: T) -> Self {
-        self.on_double_click = Some(event);
+    pub fn on_double_click(mut self, id: T) -> Self {
+        self.on_double_click = Some(id);
         self
     }
 
-    pub fn on_right_click(mut self, event: T) -> Self {
-        self.on_right_click = Some(event);
+    pub fn on_right_click(mut self, id: T) -> Self {
+        self.on_right_click = Some(id);
         self
     }
 
@@ -352,6 +354,16 @@ where
         self.builder.tooltip = Some(tooltip.to_string());
         self.sys.set_tooltip(tooltip)
     }
+
+    /*
+    pub fn set_checkable(&mut self, id: T, is_checked: bool) -> Result<(), Error> {
+        todo!()
+    }
+
+    pub fn set_disabled(&mut self, id: T, disabled: bool) -> Result<(), Error> {
+        todo!()
+    }
+    */
 
     // TODO: I think following are redundant, one could do reactively following and more with set_menu, but perhaps someone doesn't care about reactive way?
 

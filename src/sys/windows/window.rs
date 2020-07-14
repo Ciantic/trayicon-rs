@@ -197,7 +197,7 @@ where
                 // Menu command
                 if cmd == 0 {
                     if let Some(v) = window.menu.as_ref() {
-                        if let Some(event) = v.events.get(&(identifier as usize)) {
+                        if let Some(event) = v.ids.get(&(identifier as usize)) {
                             window.sender.send(event);
                         }
                     }
