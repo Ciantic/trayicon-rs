@@ -20,25 +20,25 @@ pub fn wchar_array(string: &str, dst: &mut [u16]) {
 mod tests {
     use super::*;
 
+    /// Ensure that too long strings gets truncated and is null terminated
     #[test]
     fn test_wchar_too_long() {
-        // Ensure that too long strings gets truncated and is null terminated
         let mut dst: [u16; 5] = [99, 99, 99, 99, 99];
         wchar_array("HELLO WORLD", dst.as_mut());
         assert_eq!(dst, [72, 69, 76, 76, 0]);
     }
 
+    /// Ensure that too short strings is null terminated
     #[test]
     fn test_wchar_too_short() {
-        // Ensure that too long wchar gets truncated and is null terminated
         let mut dst: [u16; 5] = [99, 99, 99, 99, 99];
         wchar_array("HI!", dst.as_mut());
         assert_eq!(dst, [72, 73, 33, 0, 99]);
     }
 
+    /// Ensure that empty string is null terminated
     #[test]
     fn test_wchar_empty() {
-        // Ensure that empty string is null terminated
         let mut dst: [u16; 5] = [99, 99, 99, 99, 99];
         wchar_array("", dst.as_mut());
         assert_eq!(dst, [0, 99, 99, 99, 99]);
