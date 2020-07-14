@@ -35,4 +35,12 @@ mod tests {
         wchar_array("HI!", dst.as_mut());
         assert_eq!(dst, [72, 73, 33, 0, 99]);
     }
+
+    #[test]
+    fn test_wchar_empty() {
+        // Ensure that empty string is null terminated
+        let mut dst: [u16; 5] = [99, 99, 99, 99, 99];
+        wchar_array("", dst.as_mut());
+        assert_eq!(dst, [0, 99, 99, 99, 99]);
+    }
 }
