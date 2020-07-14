@@ -182,7 +182,7 @@ where
 /// senders depending on the optional features. By default the sender function
 /// uses `std::sync::mpsc::Sender<T>`, additionally if `winit` feature is
 /// enabled you can choose to use `winit::event_loop::EventLoopProxy<T>` or with
-/// `crossbeam` feature the `crossbeam_channel::Sender<T>` is available.
+/// `crossbeam-channel` feature the `crossbeam_channel::Sender<T>` is available.
 ///
 /// This is defined as consuming builder, this includes conditional helper
 /// `when` for composing conditionally some settings.
@@ -328,24 +328,20 @@ where
 
     /// Set the icon if changed
     pub fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
-        if let Ok(old_icon) = &self.builder.icon {
-            if old_icon == icon {
-                return Ok(());
-            }
+        if self.builder.icon.as_ref() == Ok(icon) {
+            return Ok(());
         }
         self.builder.icon = Ok(icon.clone());
-        self.sys.set_icon(&icon)
+        self.sys.set_icon(icon)
     }
 
     /// Set the menu if changed
     pub fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error> {
-        if let Some(old_menu) = &self.builder.menu {
-            if old_menu == menu {
-                return Ok(());
-            }
+        if self.builder.menu.as_ref() == Some(menu) {
+            return Ok(());
         }
         self.builder.menu = Some(menu.clone());
-        self.sys.set_menu(&menu)
+        self.sys.set_menu(menu)
     }
 
     // TODO: I think following are redundant, one could do reactively following and more with set_menu, but perhaps someone doesn't care about reactive way?
