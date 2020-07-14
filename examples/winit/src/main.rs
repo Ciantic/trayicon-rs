@@ -15,6 +15,7 @@ enum Events {
     Item2,
     Item3,
     Item4,
+    DisabledItem1,
     CheckItem1,
     SubItem1,
     SubItem2,
@@ -40,6 +41,7 @@ fn main() {
         .on_double_click(Events::DoubleClickTrayIcon)
         .menu(
             MenuBuilder::new()
+                .item("Item 4 Set Tooltip", Events::Item4)
                 .item("Item 3 Replace Menu 👍", Events::Item3)
                 .item("Item 2 Change Icon Green", Events::Item2)
                 .item("Item 1 Change Icon Red", Events::Item1)
@@ -55,7 +57,7 @@ fn main() {
                 .with(MenuItem::Item {
                     name: "Item Disabled".into(),
                     disabled: true, // Disabled entry example
-                    event: Events::Item4,
+                    event: Events::DisabledItem1,
                     icon: None,
                 })
                 .separator()
@@ -88,10 +90,13 @@ fn main() {
                     tray_icon
                         .set_menu(
                             &MenuBuilder::new()
-                                .item("New menu item", Events::Item1)
+                                .item("Another item", Events::Item1)
                                 .item("Exit", Events::Exit),
                         )
                         .unwrap();
+                }
+                Events::Item4 => {
+                    tray_icon.set_tooltip("Menu changed!").unwrap();
                 }
                 e => println!("Got event {:?}", e),
             },

@@ -344,6 +344,10 @@ where
         self.sys.set_menu(menu)
     }
 
+    pub fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error> {
+        self.sys.set_tooltip(tooltip)
+    }
+
     // TODO: I think following are redundant, one could do reactively following and more with set_menu, but perhaps someone doesn't care about reactive way?
 
     // pub fn set_check(&mut self, is_checked: bool, event: T) -> bool {
@@ -366,4 +370,5 @@ where
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;
+    fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error>;
 }

@@ -226,6 +226,13 @@ impl<T> TrayIconBase<T> for TrayIconWindow<T>
 where
     T: PartialEq + Clone + 'static,
 {
+    fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error> {
+        if !self.notify_icon.set_tooltip(tooltip) {
+            return Err(Error::OsError);
+        }
+        Ok(())
+    }
+
     /// Set icon
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
         if !self.notify_icon.set_icon(&icon.sys) {
