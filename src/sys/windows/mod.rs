@@ -1,6 +1,7 @@
 mod hicon;
 mod hmenu;
 mod notifyicon;
+mod wchar;
 mod window;
 
 use std::collections::HashMap;
@@ -29,12 +30,13 @@ where
     T: PartialEq + Clone + 'static,
 {
     let mut menu: Option<MenuSys<T>> = None;
+    let tooltip = &builder.tooltip;
     let hicon = &builder.icon.as_ref()?.sys;
     let on_click = builder.on_click.clone();
     let on_right_click = builder.on_right_click.clone();
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
     let on_double_click = builder.on_double_click.clone();
-    let notify_icon = NotifyIcon::new(hicon);
+    let notify_icon = NotifyIcon::new(hicon, tooltip);
 
     // Try to get a popup menu
     if let Some(rhmenu) = &builder.menu {

@@ -35,11 +35,12 @@ fn main() {
     let mut tray_icon = TrayIconBuilder::new()
         .sender_winit(proxy)
         .icon_from_buffer(icon)
+        .tooltip("Cool Tray 👀 Icon")
         .on_click(Events::ClickTrayIcon)
         .on_double_click(Events::DoubleClickTrayIcon)
         .menu(
             MenuBuilder::new()
-                .item("Item 3 Replace Menu", Events::Item3)
+                .item("Item 3 Replace Menu 👍", Events::Item3)
                 .item("Item 2 Change Icon Green", Events::Item2)
                 .item("Item 1 Change Icon Red", Events::Item1)
                 .separator()

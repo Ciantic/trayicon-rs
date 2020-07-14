@@ -1,3 +1,4 @@
+use super::wchar::wchar;
 use std::fmt::Debug;
 use winapi::shared::windef::{HMENU, HWND};
 use winapi::um::winuser;
@@ -30,10 +31,7 @@ impl WinHMenu {
                     }
                 },
                 id,
-                format!("{}\0", name)
-                    .encode_utf16()
-                    .collect::<Vec<_>>()
-                    .as_ptr() as _,
+                wchar(name).as_ptr() as _,
             )
         };
     }
@@ -48,17 +46,8 @@ impl WinHMenu {
         if disabled {
             flags |= winuser::MF_GRAYED
         }
-        let _res = unsafe {
-            winuser::AppendMenuW(
-                self.hmenu,
-                flags,
-                id,
-                format!("{}\0", name)
-                    .encode_utf16()
-                    .collect::<Vec<_>>()
-                    .as_ptr() as _,
-            )
-        };
+        let _res =
+            unsafe { winuser::AppendMenuW(self.hmenu, flags, id, wchar(name).as_ptr() as _) };
     }
     pub fn add_child_menu(&mut self, name: &str, menu: WinHMenu, disabled: bool) {
         let mut flags = winuser::MF_POPUP;
@@ -70,10 +59,7 @@ impl WinHMenu {
                 self.hmenu,
                 flags,
                 menu.hmenu as _,
-                format!("{}\0", name)
-                    .encode_utf16()
-                    .collect::<Vec<_>>()
-                    .as_ptr() as _,
+                wchar(name).as_ptr() as _,
             )
         };
         self.child_menus.push(menu);

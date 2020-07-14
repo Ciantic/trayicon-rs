@@ -1,4 +1,4 @@
-use super::{hicon::WinHIcon, msgs};
+use super::{hicon::WinHIcon, msgs, wchar::wchar_array};
 use std::fmt::Debug;
 use winapi::shared::windef::HWND;
 
@@ -10,7 +10,7 @@ pub struct NotifyIcon {
 }
 
 impl NotifyIcon {
-    pub fn new(winhicon: &WinHIcon) -> NotifyIcon {
+    pub fn new(winhicon: &WinHIcon, tooltip: &Option<String>) -> NotifyIcon {
         static mut ICON_ID: u32 = 1000;
         unsafe {
             ICON_ID += 1;
@@ -20,7 +20,10 @@ impl NotifyIcon {
             nid: unsafe { std::mem::zeroed() },
             tooltip: unsafe { std::mem::zeroed() },
         };
-        icon.nid.cbSize = std::mem::size_of::<winapi::um::shellapi::NOTIFYICONDATAW>() as u32; //prep
+        if let Some(tooltip) = tooltip {
+            wchar_array(tooltip, icon.tooltip.as_mut());
+        }
+        icon.nid.cbSize = std::mem::size_of::<winapi::um::shellapi::NOTIFYICONDATAW>() as u32;
         icon.nid.uID = unsafe { ICON_ID };
         icon.nid.uCallbackMessage = msgs::WM_USER_TRAYICON;
         icon.nid.hIcon = icon.winhicon.hicon;

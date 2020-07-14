@@ -197,6 +197,7 @@ where
     width: Option<u32>,
     height: Option<u32>,
     menu: Option<MenuBuilder<T>>,
+    tooltip: Option<String>,
     on_click: Option<T>,
     on_double_click: Option<T>,
     on_right_click: Option<T>,
@@ -228,6 +229,7 @@ where
             width: None,
             height: None,
             menu: None,
+            tooltip: None,
             on_click: None,
             on_double_click: None,
             on_right_click: None,
@@ -259,6 +261,11 @@ where
     #[cfg(feature = "crossbeam-channel")]
     pub fn sender_crossbeam(mut self, s: crossbeam_channel::Sender<T>) -> Self {
         self.sender = Some(TrayIconSender::Crossbeam(s));
+        self
+    }
+
+    pub fn tooltip(mut self, tooltip: &str) -> Self {
+        self.tooltip = Some(tooltip.to_string());
         self
     }
 
