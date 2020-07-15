@@ -207,14 +207,11 @@ where
     ///
     /// Prefer building a new menu instead of mutating it with this method.
     fn set_disabled(&mut self, id: T, disabled: bool) -> Result<(), Error> {
-        self.mutate_item(id, |i| {
-            println!("Set disabled");
-            match i {
-                MenuItem::Item { disabled: d, .. } => *d = disabled,
-                MenuItem::Checkable { disabled: d, .. } => *d = disabled,
-                MenuItem::Submenu { disabled: d, .. } => *d = disabled,
-                MenuItem::Separator => (),
-            }
+        self.mutate_item(id, |i| match i {
+            MenuItem::Item { disabled: d, .. } => *d = disabled,
+            MenuItem::Checkable { disabled: d, .. } => *d = disabled,
+            MenuItem::Submenu { disabled: d, .. } => *d = disabled,
+            MenuItem::Separator => (),
         });
         Ok(())
     }
@@ -245,7 +242,7 @@ where
         if let Some(item) = found_item {
             f(item)
         } else {
-            // Try to recurse, if submenu's exist
+            // Try to recurse, if submenus exist
             let maybe_found_submenu = self.menu_items.iter_mut().find(|i| match i {
                 MenuItem::Submenu { .. } => true,
                 _ => false,

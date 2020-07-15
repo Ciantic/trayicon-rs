@@ -46,7 +46,6 @@ fn main() {
                 .item("Item 2 Change Icon Green", Events::Item2)
                 .item("Item 1 Change Icon Red", Events::Item1)
                 .separator()
-                .checkable("This is checkable", true, Events::CheckItem1)
                 .submenu(
                     "Sub Menu",
                     MenuBuilder::new()
@@ -54,6 +53,7 @@ fn main() {
                         .item("Sub Item 2", Events::SubItem2)
                         .item("Sub Item 3", Events::SubItem3),
                 )
+                .checkable("This checkbox toggles disable", true, Events::CheckItem1)
                 .with(MenuItem::Item {
                     name: "Item Disabled".into(),
                     disabled: true, // Disabled entry example
@@ -80,7 +80,7 @@ fn main() {
             Event::UserEvent(e) => match e {
                 Events::Exit => *control_flow = ControlFlow::Exit,
                 Events::CheckItem1 => {
-                    // You can mutate single checked value followingly.
+                    // You can mutate single checked, disabled value followingly.
                     //
                     // However, I think better way is to use reactively
                     // `set_menu` by building the menu based on application
