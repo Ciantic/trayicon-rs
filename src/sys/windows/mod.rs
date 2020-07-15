@@ -70,7 +70,7 @@ fn build_menu_inner<T>(j: &mut usize, builder: &MenuBuilder<T>) -> Result<MenuSy
 where
     T: PartialEq + Clone + 'static,
 {
-    let mut hmenu = WinHMenu::new();
+    let mut hmenu = WinHMenu::new()?;
     let mut map: HashMap<usize, T> = HashMap::new();
     builder.menu_items.iter().for_each(|item| match item {
         MenuItem::Submenu {
@@ -110,7 +110,9 @@ where
             hmenu.add_menu_item(&name, *j, *disabled);
         }
 
-        MenuItem::Separator => hmenu.add_separator(),
+        MenuItem::Separator => {
+            hmenu.add_separator();
+        }
     });
 
     Ok(MenuSys {

@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Error, IconBase};
 use winapi::shared::minwindef::PBYTE;
 use winapi::shared::windef::HICON;
 use winapi::um::winuser;
@@ -9,8 +9,8 @@ pub struct WinHIcon {
     pub hicon: HICON,
 }
 
-impl WinHIcon {
-    pub fn from_buffer(
+impl IconBase for WinHIcon {
+    fn from_buffer(
         buffer: &'static [u8],
         width: Option<u32>,
         height: Option<u32>,

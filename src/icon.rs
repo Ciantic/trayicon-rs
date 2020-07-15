@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Error, IconBase};
 use std::fmt::Debug;
 
 #[derive(Clone)]

@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use winapi::um::winuser;
 use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
 
-use crate::{trayicon::TrayIconBase, Error, Icon, MenuBuilder, TrayIconSender};
+use crate::{trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase};
 use std::fmt::Debug;
 use winapi::um::commctrl;
 

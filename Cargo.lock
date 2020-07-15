@@ -678,7 +678,7 @@ dependencies = [
 
 [[package]]
 name = "trayicon"
-version = "0.1.0-beta.17"
+version = "0.1.0-beta.18"
 dependencies = [
  "crossbeam-channel",
  "winapi 0.3.9",

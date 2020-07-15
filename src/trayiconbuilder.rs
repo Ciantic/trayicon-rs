@@ -1,4 +1,20 @@
-use crate::{Error, Icon, MenuBuilder, TrayIcon, TrayIconSender};
+use crate::{trayiconsender::TrayIconSender, Icon, MenuBuilder, TrayIcon};
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Error {
+    MenuItemNotFound,
+    IconLoadingFailed,
+    SenderMissing,
+    IconMissing,
+    OsError,
+}
+
+// Why do I need to do this, can't Rust do this automatically?
+impl From<&Error> for Error {
+    fn from(e: &Error) -> Self {
+        *e
+    }
+}
 
 /// Tray Icon builder
 ///

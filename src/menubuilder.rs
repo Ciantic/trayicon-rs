@@ -109,9 +109,12 @@ where
     /// state with this method.
     pub(crate) fn get_checkable(&mut self, find_id: T) -> Option<bool> {
         let mut found_item = None;
-        self.mutate_item(find_id, |i| {
+        let _ = self.mutate_item(find_id, |i| {
             if let MenuItem::Checkable { is_checked, .. } = i {
                 found_item = Some(*is_checked);
+                Ok(())
+            } else {
+                Err(Error::MenuItemNotFound)
             }
         });
         found_item
@@ -123,10 +126,12 @@ where
     pub(crate) fn set_checkable(&mut self, id: T, checked: bool) -> Result<(), Error> {
         self.mutate_item(id, |i| {
             if let MenuItem::Checkable { is_checked, .. } = i {
-                *is_checked = checked
+                *is_checked = checked;
+                Ok(())
+            } else {
+                Err(Error::MenuItemNotFound)
             }
-        });
-        Ok(())
+        })
     }
 
     /// Set disabled state
@@ -134,12 +139,20 @@ where
     /// Prefer building a new menu instead of mutating it with this method.
     pub(crate) fn set_disabled(&mut self, id: T, disabled: bool) -> Result<(), Error> {
         self.mutate_item(id, |i| match i {
-            MenuItem::Item { disabled: d, .. } => *d = disabled,
-            MenuItem::Checkable { disabled: d, .. } => *d = disabled,
-            MenuItem::Submenu { disabled: d, .. } => *d = disabled,
-            MenuItem::Separator => (),
-        });
-        Ok(())
+            MenuItem::Item { disabled: d, .. } => {
+                *d = disabled;
+                Ok(())
+            }
+            MenuItem::Checkable { disabled: d, .. } => {
+                *d = disabled;
+                Ok(())
+            }
+            MenuItem::Submenu { disabled: d, .. } => {
+                *d = disabled;
+                Ok(())
+            }
+            MenuItem::Separator => Err(Error::MenuItemNotFound),
+        })
     }
 
     /// Find item and optionally mutate
@@ -147,16 +160,16 @@ where
     /// Recursively searches for item with id, and applies function f to item if
     /// found. There is no recursion depth limitation and may cause stack
     /// issues.
-    fn mutate_item<F>(&mut self, id: T, f: F)
+    fn mutate_item<F>(&mut self, id: T, f: F) -> Result<(), Error>
     where
-        F: FnOnce(&mut MenuItem<T>) -> (),
+        F: FnOnce(&mut MenuItem<T>) -> Result<(), Error>,
     {
-        self._mutate_item_recurse_ref(id, f);
+        self._mutate_item_recurse_ref(id, f)
     }
 
-    fn _mutate_item_recurse_ref<F>(&mut self, find_id: T, f: F)
+    fn _mutate_item_recurse_ref<F>(&mut self, find_id: T, f: F) -> Result<(), Error>
     where
-        F: FnOnce(&mut MenuItem<T>) -> (),
+        F: FnOnce(&mut MenuItem<T>) -> Result<(), Error>,
     {
         let found_item = self.menu_items.iter_mut().find(|f| match f {
             MenuItem::Item { id, .. } if id == &find_id => true,
@@ -175,9 +188,10 @@ where
             });
             if let Some(found_submenu) = maybe_found_submenu {
                 if let MenuItem::Submenu { children, .. } = found_submenu {
-                    children._mutate_item_recurse_ref(find_id, f)
+                    return children._mutate_item_recurse_ref(find_id, f);
                 }
             }
+            Err(Error::MenuItemNotFound)
         }
     }
 }

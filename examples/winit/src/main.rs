@@ -85,12 +85,12 @@ fn main() {
                     // However, I think better way is to use reactively
                     // `set_menu` by building the menu based on application
                     // state.
-                    if let Some(old_value) = tray_icon.get_item_checkable(Events::CheckItem1) {
+                    if let Some(old_value) = tray_icon.get_menu_item_checkable(Events::CheckItem1) {
                         // Set checkable example
-                        let _ = tray_icon.set_item_checkable(Events::CheckItem1, !old_value);
+                        let _ = tray_icon.set_menu_item_checkable(Events::CheckItem1, !old_value);
 
                         // Set disabled example
-                        let _ = tray_icon.set_item_disabled(Events::DisabledItem1, !old_value);
+                        let _ = tray_icon.set_menu_item_disabled(Events::DisabledItem1, !old_value);
                     }
                 }
                 Events::Item1 => {
