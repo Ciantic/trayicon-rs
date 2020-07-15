@@ -79,7 +79,20 @@ fn main() {
             // User events
             Event::UserEvent(e) => match e {
                 Events::Exit => *control_flow = ControlFlow::Exit,
+                Events::CheckItem1 => {
+                    // You can mutate single checked value followingly.
+                    //
+                    // However, I think better way is to use reactively
+                    // `set_menu` by building the menu based on application
+                    // state.
+                    if let Some(old_value) = tray_icon.get_item_checkable(Events::CheckItem1) {
+                        // Set checkable example
+                        let _ = tray_icon.set_item_checkable(Events::CheckItem1, !old_value);
 
+                        // Set disabled example
+                        let _ = tray_icon.set_item_disabled(Events::DisabledItem1, !old_value);
+                    }
+                }
                 Events::Item1 => {
                     tray_icon.set_icon(&second_icon).unwrap();
                 }

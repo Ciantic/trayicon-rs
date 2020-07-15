@@ -176,6 +176,123 @@ where
     pub(crate) fn build(&self) -> Result<crate::sys::MenuSys<T>, Error> {
         sys::build_menu(self)
     }
+
+    /// Get checkable state, if found.
+    ///
+    /// Prefer maintaining proper application state instead of getting checkable
+    /// state with this method.
+    fn get_checkable(&mut self, find_id: T) -> Option<bool> {
+        let mut found_item = None;
+        self.mutate_item(find_id, |i| {
+            if let MenuItem::Checkable { is_checked, .. } = i {
+                found_item = Some(*is_checked);
+            }
+        });
+        found_item
+    }
+
+    /// Set checkable
+    ///
+    /// Prefer building a new menu instead of mutating it with this method.
+    fn set_checkable(&mut self, id: T, checked: bool) -> Result<(), Error> {
+        self.mutate_item(id, |i| {
+            if let MenuItem::Checkable { is_checked, .. } = i {
+                *is_checked = checked
+            }
+        });
+        Ok(())
+    }
+
+    /// Set disabled state
+    ///
+    /// Prefer building a new menu instead of mutating it with this method.
+    fn set_disabled(&mut self, id: T, disabled: bool) -> Result<(), Error> {
+        self.mutate_item(id, |i| {
+            println!("Set disabled");
+            match i {
+                MenuItem::Item { disabled: d, .. } => *d = disabled,
+                MenuItem::Checkable { disabled: d, .. } => *d = disabled,
+                MenuItem::Submenu { disabled: d, .. } => *d = disabled,
+                MenuItem::Separator => (),
+            }
+        });
+        Ok(())
+    }
+
+    /// Find item and optionally mutate
+    ///
+    /// Recursively searches for item with id, and applies function f to item if
+    /// found. There is no recursion depth limitation and may cause stack
+    /// issues.
+    fn mutate_item<F>(&mut self, id: T, f: F)
+    where
+        F: FnOnce(&mut MenuItem<T>) -> (),
+    {
+        self._mutate_item_recurse_ref(id, f);
+    }
+
+    fn _mutate_item_recurse_ref<F>(&mut self, find_id: T, f: F)
+    where
+        F: FnOnce(&mut MenuItem<T>) -> (),
+    {
+        let found_item = self.menu_items.iter_mut().find(|f| match f {
+            MenuItem::Item { id, .. } if id == &find_id => true,
+            MenuItem::Checkable { id, .. } if id == &find_id => true,
+            MenuItem::Submenu { id, .. } if id.as_ref() == Some(&find_id) => true,
+            _ => false,
+        });
+
+        if let Some(item) = found_item {
+            f(item)
+        } else {
+            // Try to recurse, if submenu's exist
+            let maybe_found_submenu = self.menu_items.iter_mut().find(|i| match i {
+                MenuItem::Submenu { .. } => true,
+                _ => false,
+            });
+            if let Some(found_submenu) = maybe_found_submenu {
+                if let MenuItem::Submenu { children, .. } = found_submenu {
+                    children._mutate_item_recurse_ref(find_id, f)
+                }
+            }
+        }
+    }
+
+    // Following is too functional programmery way, Rust isn't that immutable
+    //
+    // fn mutate_item<F>(mut self, id: T, f: &F) -> Self
+    // where
+    //     F: FnOnce(MenuItem<T>) -> MenuItem<T>,
+    // {
+    //     MenuBuilder::new_from_items(self._mutate_item_recurse(id, f))
+    // }
+
+    // fn _mutate_item_recurse<F>(mut self, id: T, f: &F) -> Vec<MenuItem<T>>
+    // where
+    //     F: FnOnce(MenuItem<T>) -> MenuItem<T>,
+    // {
+    //     self.menu_items
+    //         .drain(..)
+    //         .map(move |mut item| match item {
+    //             MenuItem::Submenu {
+    //                 id: submenu_id,
+    //                 children,
+    //                 disabled,
+    //                 icon,
+    //                 name,
+    //             } => MenuItem::Submenu {
+    //                 id: submenu_id,
+    //                 children: MenuBuilder::new_from_items(
+    //                     children._mutate_item_recurse(id.clone(), f),
+    //                 ),
+    //                 disabled,
+    //                 icon,
+    //                 name,
+    //             },
+    //             e => e,
+    //         })
+    //         .collect()
+    // }
 }
 
 /// Tray Icon builder
@@ -338,6 +455,11 @@ where
     }
 
     /// Set the menu if changed
+    ///
+    /// This can be used reactively, each time the application state changes,
+    /// build a new menu and set it with this method. This way one can avoid
+    /// using more imperative `set_item_checkable`, `get_item_checkable` and
+    /// `set_item_disabled` methods.
     pub fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error> {
         if self.builder.menu.as_ref() == Some(menu) {
             return Ok(());
@@ -355,25 +477,44 @@ where
         self.sys.set_tooltip(tooltip)
     }
 
-    /*
-    pub fn set_checkable(&mut self, id: T, is_checked: bool) -> Result<(), Error> {
-        todo!()
+    /// Set disabled
+    ///
+    /// Prefer building a new menu if application state changes instead of
+    /// mutating a menu with this method. Suggestion is to use just `set_menu`
+    /// method instead of this.
+    pub fn set_item_disabled(&mut self, id: T, disabled: bool) -> Result<(), Error> {
+        if let Some(menu) = self.builder.menu.as_mut() {
+            let _ = menu.set_disabled(id, disabled);
+            let _ = self.sys.set_menu(menu);
+        }
+        Ok(())
     }
 
-    pub fn set_disabled(&mut self, id: T, disabled: bool) -> Result<(), Error> {
-        todo!()
+    /// Set checkable
+    ///
+    /// Prefer building a new menu when application state changes instead of
+    /// mutating a menu with this method.  Suggestion is to use just `set_menu`
+    /// method instead of this.
+    pub fn set_item_checkable(&mut self, id: T, checked: bool) -> Result<(), Error> {
+        if let Some(menu) = self.builder.menu.as_mut() {
+            let _ = menu.set_checkable(id, checked);
+            let _ = self.sys.set_menu(menu);
+        }
+        Ok(())
     }
-    */
 
-    // TODO: I think following are redundant, one could do reactively following and more with set_menu, but perhaps someone doesn't care about reactive way?
-
-    // pub fn set_check(&mut self, is_checked: bool, event: T) -> bool {
-    //     true
-    // }
-
-    // pub fn set_disabled(&mut self, disabled: bool, event: T) -> bool {
-    //     true
-    // }
+    /// Get checkable state
+    ///
+    /// Prefer maintaining proper application state instead of getting checkable
+    /// state with this method. Suggestion is to use just `set_menu` method
+    /// instead of this.
+    pub fn get_item_checkable(&mut self, id: T) -> Option<bool> {
+        if let Some(menu) = self.builder.menu.as_mut() {
+            menu.get_checkable(id)
+        } else {
+            None
+        }
+    }
 }
 
 unsafe impl<T> Sync for TrayIcon<T> where T: PartialEq + Clone + 'static {}
@@ -388,4 +529,57 @@ where
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;
     fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error>;
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::*;
+
+    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+    enum Events {
+        Item1,
+        Item2,
+        Item3,
+        Item4,
+        DisabledItem1,
+        CheckItem1,
+        CheckItem2,
+        SubItem1,
+        SubItem2,
+        SubItem3,
+    }
+
+    #[test]
+    fn test_menu_mutation() {
+        // This is a good way to create menu conditionally on application state, define a function "State -> Menu"
+        let menu_builder = |checked, disabled| {
+            MenuBuilder::new()
+                .item("Item 4 Set Tooltip", Events::Item4)
+                .item("Item 3 Replace Menu 👍", Events::Item3)
+                .item("Item 2 Change Icon Green", Events::Item2)
+                .item("Item 1 Change Icon Red", Events::Item1)
+                .separator()
+                .checkable("This is checkable", checked, Events::CheckItem1)
+                .submenu(
+                    "Sub Menu",
+                    MenuBuilder::new()
+                        .item("Sub item 1", Events::SubItem1)
+                        .item("Sub Item 2", Events::SubItem2)
+                        .checkable("This is checkable", checked, Events::CheckItem2)
+                        .item("Sub Item 3", Events::SubItem3),
+                )
+                .with(MenuItem::Item {
+                    name: "Item Disabled".into(),
+                    disabled,
+                    id: Events::DisabledItem1,
+                    icon: None,
+                })
+        };
+
+        let mut old = menu_builder(false, false);
+        let _ = old.set_checkable(Events::CheckItem1, true);
+        let _ = old.set_disabled(Events::DisabledItem1, true);
+        let _ = old.set_checkable(Events::CheckItem2, true);
+        assert_eq!(old, menu_builder(true, true));
+    }
 }
