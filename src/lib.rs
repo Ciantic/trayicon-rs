@@ -15,10 +15,10 @@ mod trayiconbuilder;
 // Each OS specific implementation must export following:
 pub(crate) use sys::{build_menu, build_trayicon, IconSys, MenuSys, TrayIconSys};
 
-pub use icon::Icon;
-pub use menubuilder::{MenuBuilder, MenuItem};
-pub use trayicon::TrayIcon;
-pub use trayiconbuilder::TrayIconBuilder;
+pub use crate::icon::Icon;
+pub use crate::menubuilder::{MenuBuilder, MenuItem};
+pub use crate::trayicon::TrayIcon;
+pub use crate::trayiconbuilder::TrayIconBuilder;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Error {
