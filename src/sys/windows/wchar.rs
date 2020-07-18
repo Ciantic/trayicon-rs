@@ -1,3 +1,10 @@
+//! This module naively converts strings to UTF-16 for windows FFI, even though
+//! Windows does not follow to UTF-16 implementation very well. There might be
+//! some issues with this approach.
+//!
+//! For more robust implementation it would be better to use [OsString,
+//! OsStringExt and OsStrExt](https://doc.rust-lang.org/std/os/windows/ffi/index.html)
+
 /// Returns wchar vector
 ///
 /// Usage with winapi: wchar("Foo").as_ptr() gives LPCWSTR
