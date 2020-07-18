@@ -1,4 +1,4 @@
-use super::{msgs, notifyicon::NotifyIcon, MenuSys};
+use super::{msgs, winnotifyicon::WinNotifyIcon, MenuSys};
 use winapi::shared::{
     basetsd::{DWORD_PTR, UINT_PTR},
     minwindef::{HIWORD, LOWORD, LPARAM, LPVOID, LRESULT, UINT, WPARAM},
@@ -16,23 +16,23 @@ use winapi::um::commctrl;
 ///
 /// In Windows the Tray Icon requires a window for message pump, it's not shown.
 #[derive(Debug)]
-pub struct TrayIconWindow<T>
+pub struct WinTrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
     hwnd: HWND,
     sender: TrayIconSender<T>,
     menu: Option<MenuSys<T>>,
-    notify_icon: NotifyIcon,
+    notify_icon: WinNotifyIcon,
     on_click: Option<T>,
     on_double_click: Option<T>,
     on_right_click: Option<T>,
 }
 
-unsafe impl<T> Send for TrayIconWindow<T> where T: PartialEq + Clone {}
-unsafe impl<T> Sync for TrayIconWindow<T> where T: PartialEq + Clone {}
+unsafe impl<T> Send for WinTrayIcon<T> where T: PartialEq + Clone {}
+unsafe impl<T> Sync for WinTrayIcon<T> where T: PartialEq + Clone {}
 
-impl<T> TrayIconWindow<T>
+impl<T> WinTrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -40,11 +40,11 @@ where
     pub(crate) fn new(
         sender: TrayIconSender<T>,
         menu: Option<MenuSys<T>>,
-        notify_icon: NotifyIcon,
+        notify_icon: WinNotifyIcon,
         on_click: Option<T>,
         on_double_click: Option<T>,
         on_right_click: Option<T>,
-    ) -> Result<Box<TrayIconWindow<T>>, Error>
+    ) -> Result<Box<WinTrayIcon<T>>, Error>
     where
         T: PartialEq + Clone + 'static,
     {
@@ -53,7 +53,7 @@ where
             let wnd_class_name = "TrayIconCls\0";
             let wnd_class = winuser::WNDCLASSA {
                 style: 0,
-                lpfnWndProc: Some(TrayIconWindow::<T>::winproc),
+                lpfnWndProc: Some(WinTrayIcon::<T>::winproc),
                 hInstance: hinstance,
                 lpszClassName: wnd_class_name.as_ptr() as _,
                 cbClsExtra: 0,
@@ -66,7 +66,7 @@ where
             RegisterClassA(&wnd_class);
 
             // Create window in a memory location that doesn't change
-            let mut window = Box::new(TrayIconWindow {
+            let mut window = Box::new(WinTrayIcon {
                 hwnd: 0 as HWND,
                 notify_icon,
                 menu,
@@ -101,7 +101,7 @@ where
             }
             let proc = commctrl::SetWindowSubclass(
                 hwnd as HWND,
-                Some(TrayIconWindow::<T>::subproc),
+                Some(WinTrayIcon::<T>::subproc),
                 0,
                 ptr as *mut _ as usize,
             );
@@ -142,7 +142,7 @@ where
         data: DWORD_PTR,
     ) -> LRESULT {
         static mut WM_TASKBARCREATED: u32 = u32::MAX;
-        let window: &mut TrayIconWindow<T> = &mut *(data as *mut _);
+        let window: &mut WinTrayIcon<T> = &mut *(data as *mut _);
         match msg {
             // Window was created
             msgs::WM_USER_CREATE => {
@@ -222,7 +222,7 @@ where
     }
 }
 
-impl<T> TrayIconBase<T> for TrayIconWindow<T>
+impl<T> TrayIconBase<T> for WinTrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -253,7 +253,7 @@ where
     }
 }
 
-impl<T> Drop for TrayIconWindow<T>
+impl<T> Drop for WinTrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {

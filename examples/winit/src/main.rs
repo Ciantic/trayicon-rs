@@ -58,7 +58,7 @@ fn main() {
                     name: "Item Disabled".into(),
                     disabled: true, // Disabled entry example
                     id: Events::DisabledItem1,
-                    icon: None,
+                    icon: Result::ok(Icon::from_buffer(icon, None, None)),
                 })
                 .separator()
                 .item("E&xit", Events::Exit),

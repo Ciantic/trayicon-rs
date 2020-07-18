@@ -1,19 +1,19 @@
-mod hicon;
-mod hmenu;
-mod notifyicon;
 mod wchar;
-mod window;
+mod winhicon;
+mod winhmenu;
+mod winnotifyicon;
+mod wintrayicon;
 
 use std::collections::HashMap;
-use window::TrayIconWindow;
+use wintrayicon::WinTrayIcon;
 
 use crate::{Error, MenuBuilder, MenuItem, TrayIconBuilder};
-use hmenu::WinHMenu;
-use notifyicon::NotifyIcon;
+use winhmenu::WinHMenu;
+use winnotifyicon::WinNotifyIcon;
 
 // Windows implementations of Icon, TrayIcon, and Menu
-pub use hicon::WinHIcon as IconSys;
-pub use window::TrayIconWindow as TrayIconSys;
+pub use winhicon::WinHIcon as IconSys;
+pub use wintrayicon::WinTrayIcon as TrayIconSys;
 
 #[derive(Debug)]
 pub struct MenuSys<T>
@@ -25,7 +25,7 @@ where
 }
 
 /// Build the tray icon
-pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<Box<TrayIconWindow<T>>, Error>
+pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<Box<WinTrayIcon<T>>, Error>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -36,14 +36,14 @@ where
     let on_right_click = builder.on_right_click.clone();
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
     let on_double_click = builder.on_double_click.clone();
-    let notify_icon = NotifyIcon::new(hicon, tooltip);
+    let notify_icon = WinNotifyIcon::new(hicon, tooltip);
 
     // Try to get a popup menu
     if let Some(rhmenu) = &builder.menu {
         menu = Some(rhmenu.build()?);
     }
 
-    Ok(TrayIconWindow::new(
+    Ok(WinTrayIcon::new(
         sender,
         menu,
         notify_icon,

@@ -8,7 +8,7 @@ use winapi::um::winuser;
 /// is dropped
 #[derive(Debug)]
 pub struct WinHMenu {
-    pub hmenu: HMENU,
+    hmenu: HMENU,
     child_menus: Vec<WinHMenu>,
 }
 

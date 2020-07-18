@@ -1,20 +1,20 @@
-use super::{hicon::WinHIcon, msgs, wchar::wchar_array};
+use super::{msgs, wchar::wchar_array, winhicon::WinHIcon};
 use std::fmt::Debug;
 use winapi::shared::windef::HWND;
 
 /// Purpose of this struct is to retain NotifyIconDataW and remove it on drop
-pub struct NotifyIcon {
+pub struct WinNotifyIcon {
     winhicon: WinHIcon,
     nid: winapi::um::shellapi::NOTIFYICONDATAW,
 }
 
-impl NotifyIcon {
-    pub fn new(winhicon: &WinHIcon, tooltip: &Option<String>) -> NotifyIcon {
+impl WinNotifyIcon {
+    pub fn new(winhicon: &WinHIcon, tooltip: &Option<String>) -> WinNotifyIcon {
         static mut ICON_ID: u32 = 1000;
         unsafe {
             ICON_ID += 1;
         }
-        let mut icon = NotifyIcon {
+        let mut icon = WinNotifyIcon {
             winhicon: winhicon.clone(),
             nid: unsafe { std::mem::zeroed() },
         };
@@ -33,7 +33,7 @@ impl NotifyIcon {
     }
 }
 
-impl NotifyIcon {
+impl WinNotifyIcon {
     pub fn add(&mut self, hwnd: HWND) -> bool {
         self.nid.hWnd = hwnd;
         let res = unsafe {
@@ -66,16 +66,16 @@ impl NotifyIcon {
         res == 1
     }
 }
-unsafe impl Send for NotifyIcon {}
-unsafe impl Sync for NotifyIcon {}
+unsafe impl Send for WinNotifyIcon {}
+unsafe impl Sync for WinNotifyIcon {}
 
-impl Debug for NotifyIcon {
+impl Debug for WinNotifyIcon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "TrayIcon")
     }
 }
 
-impl Drop for NotifyIcon {
+impl Drop for WinNotifyIcon {
     fn drop(&mut self) {
         unsafe {
             winapi::um::shellapi::Shell_NotifyIconW(
