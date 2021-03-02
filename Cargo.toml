@@ -10,7 +10,7 @@ homepage = "https://github.com/ciantic/trayicon-rs/"
 repository = "https://github.com/ciantic/trayicon-rs/"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", features = ["winuser", "windef", "minwindef", "shellapi", "libloaderapi", "commctrl", "basetsd"] }
+winapi = { version = "0.3.9", features = ["winuser", "windef", "minwindef", "shellapi", "libloaderapi", "basetsd"] }
 
 [dependencies]
 winit = { version = "0.24", optional = true }

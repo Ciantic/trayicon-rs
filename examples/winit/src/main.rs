@@ -70,6 +70,13 @@ fn main() {
         *control_flow = ControlFlow::Wait;
 
         match event {
+            // This ensures that the tray_icon is removed as the application closes
+            Event::LoopDestroyed => {
+                // This is not necessary if you have moved the value to the loop
+                // already
+                let _ = tray_icon;
+            }
+
             // Main window events
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,

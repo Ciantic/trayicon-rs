@@ -1,4 +1,7 @@
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
 use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LPVOID, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::{HBRUSH, HICON, HMENU, HWND, POINT};
 use winapi::um::libloaderapi::GetModuleHandleW;
@@ -8,7 +11,47 @@ use super::wchar::wchar;
 use super::{msgs, winnotifyicon::WinNotifyIcon, MenuSys};
 use crate::{trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase};
 
-pub type WinTrayIcon<T> = Box<WinTrayIconImpl<T>>;
+pub type WinTrayIcon<T> = WindowBox<T>;
+
+/// WindowBox retains the memory for the Window object until WM_NCDESTROY
+#[derive(Debug)]
+pub struct WindowBox<T>(*mut WinTrayIconImpl<T>)
+where
+    T: PartialEq + Clone + 'static;
+
+impl<T> Drop for WindowBox<T>
+where
+    T: PartialEq + Clone + 'static,
+{
+    fn drop(&mut self) {
+        unsafe {
+            // PostMessage doesn't seem to work here, because winit exits before it manages to be processed
+
+            // https://devblogs.microsoft.com/oldnewthing/20110926-00/?p=9553
+            winuser::SendMessageW(self.hwnd, winuser::WM_CLOSE, 0, 0);
+        }
+    }
+}
+
+impl<T> Deref for WindowBox<T>
+where
+    T: PartialEq + Clone + 'static,
+{
+    type Target = WinTrayIconImpl<T>;
+
+    fn deref(&self) -> &WinTrayIconImpl<T> {
+        unsafe { &mut *(self.0) }
+    }
+}
+
+impl<T> DerefMut for WindowBox<T>
+where
+    T: PartialEq + Clone + 'static,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(self.0) }
+    }
+}
 
 /// Tray Icon WINAPI Window
 ///
@@ -35,6 +78,7 @@ impl<T> WinTrayIconImpl<T>
 where
     T: PartialEq + Clone + 'static,
 {
+    #[allow(clippy::new_ret_no_self)]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         sender: TrayIconSender<T>,
@@ -65,7 +109,7 @@ where
             winuser::RegisterClassW(&wnd_class);
 
             // Create window in a memory location that doesn't change
-            let mut window = Box::new(WinTrayIconImpl {
+            let window = Box::new(WinTrayIconImpl {
                 hwnd: 0 as HWND,
                 notify_icon,
                 menu,
@@ -75,6 +119,7 @@ where
                 sender,
                 msg_taskbarcreated: None,
             });
+            let ptr = Box::into_raw(window);
             let hwnd = winuser::CreateWindowExW(
                 0,
                 wnd_class_name.as_ptr() as _,
@@ -87,22 +132,18 @@ where
                 0 as _,
                 0 as HMENU,
                 hinstance,
-                window.as_mut() as *mut _ as LPVOID,
+                ptr as *mut _ as LPVOID,
             ) as u32;
 
-            if hwnd == 0 || window.hwnd == 0 as HWND {
+            if hwnd == 0 {
                 return Err(Error::OsError);
             }
 
-            Ok(window)
+            Ok(WindowBox(ptr))
         }
     }
 
     pub fn wndproc(&mut self, msg: UINT, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-        // Note: The way this works it's not possible to catch WM_CLOSE,
-        // WM_DESTROY, WM_NCDESTROY because when the Window is dropped (see Drop
-        // implementation) it sends WM_CLOSE
-
         match msg {
             winuser::WM_CREATE => {
                 // Create notification area icon
@@ -194,16 +235,22 @@ where
         match msg {
             winuser::WM_CREATE => {
                 let create_struct: &mut winuser::CREATESTRUCTW = &mut *(lparam as *mut _);
+                // Arc::from_raw(ptr)
                 let window: &mut WinTrayIconImpl<T> =
                     &mut *(create_struct.lpCreateParams as *mut _);
                 window.hwnd = hwnd;
                 winuser::SetWindowLongPtrW(hwnd, winuser::GWL_USERDATA, window as *mut _ as _);
                 window.wndproc(msg, wparam, lparam)
             }
-            winuser::WM_CLOSE => {
-                // winuser::SetWindowLongPtrW(hwnd, winuser::GWL_USERDATA, 0);
-                winuser::DestroyWindow(hwnd);
-                0
+            winuser::WM_NCDESTROY => {
+                let window_ptr = winuser::SetWindowLongPtrW(hwnd, winuser::GWL_USERDATA, 0);
+                if window_ptr != 0 {
+                    let ptr = window_ptr as *mut WinTrayIconImpl<T>;
+                    let mut window = Box::from_raw(ptr);
+                    window.wndproc(msg, wparam, lparam)
+                } else {
+                    winuser::DefWindowProcW(hwnd, msg, wparam, lparam)
+                }
             }
             _ => {
                 let window_ptr = winuser::GetWindowLongPtrW(hwnd, winuser::GWL_USERDATA);
@@ -255,13 +302,5 @@ where
 {
     fn drop(&mut self) {
         self.notify_icon.remove();
-
-        unsafe {
-            // Does this work if drop happens of different thread?
-            winuser::SetWindowLongPtrW(self.hwnd, winuser::GWL_USERDATA, 0);
-
-            // https://devblogs.microsoft.com/oldnewthing/20110926-00/?p=9553
-            winuser::PostMessageW(self.hwnd, winuser::WM_CLOSE, 0, 0)
-        };
     }
 }
