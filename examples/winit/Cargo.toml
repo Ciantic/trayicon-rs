@@ -6,5 +6,5 @@ edition = "2018"
 publish = false
 
 [dependencies]
-winit = "0.22.2"
+winit = "0.24"
 trayicon = { path = "../../", features = ["winit"] }

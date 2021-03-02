@@ -81,8 +81,7 @@ impl WinHMenu {
     }
 
     pub fn add_separator(&self) -> bool {
-        let res =
-            unsafe { winuser::AppendMenuW(self.hmenu, winuser::MF_SEPARATOR, 0 as _, 0 as _) };
+        let res = unsafe { winuser::AppendMenuW(self.hmenu, winuser::MF_SEPARATOR, 0, 0 as _) };
         res >= 0
     }
 

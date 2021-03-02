@@ -1,16 +1,12 @@
-use super::{msgs, winnotifyicon::WinNotifyIcon, MenuSys};
-use winapi::shared::{
-    basetsd::{DWORD_PTR, UINT_PTR},
-    minwindef::{HIWORD, LOWORD, LPARAM, LPVOID, LRESULT, UINT, WPARAM},
-    windef::{HBRUSH, HICON, HMENU, HWND, POINT},
-};
-use winapi::um::libloaderapi::GetModuleHandleA;
-use winapi::um::winuser;
-use winapi::um::winuser::{CreateWindowExA, DefWindowProcA, RegisterClassA};
-
-use crate::{trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase};
 use std::fmt::Debug;
-use winapi::um::commctrl;
+use winapi::shared::minwindef::{HIWORD, LOWORD, LPARAM, LPVOID, LRESULT, UINT, WPARAM};
+use winapi::shared::windef::{HBRUSH, HICON, HMENU, HWND, POINT};
+use winapi::um::libloaderapi::GetModuleHandleW;
+use winapi::um::winuser;
+
+use super::wchar::wchar;
+use super::{msgs, winnotifyicon::WinNotifyIcon, MenuSys};
+use crate::{trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase};
 
 /// Tray Icon WINAPI Window
 ///
@@ -27,6 +23,7 @@ where
     on_click: Option<T>,
     on_double_click: Option<T>,
     on_right_click: Option<T>,
+    msg_taskbarcreated: Option<UINT>,
 }
 
 unsafe impl<T> Send for WinTrayIcon<T> where T: PartialEq + Clone {}
@@ -49,9 +46,9 @@ where
         T: PartialEq + Clone + 'static,
     {
         unsafe {
-            let hinstance = GetModuleHandleA(0 as _);
-            let wnd_class_name = "TrayIconCls\0";
-            let wnd_class = winuser::WNDCLASSA {
+            let hinstance = GetModuleHandleW(0 as _);
+            let wnd_class_name = wchar("TrayIconCls");
+            let wnd_class = winuser::WNDCLASSW {
                 style: 0,
                 lpfnWndProc: Some(WinTrayIcon::<T>::winproc),
                 hInstance: hinstance,
@@ -63,7 +60,7 @@ where
                 hbrBackground: 0 as HBRUSH,
                 lpszMenuName: 0 as _,
             };
-            RegisterClassA(&wnd_class);
+            winuser::RegisterClassW(&wnd_class);
 
             // Create window in a memory location that doesn't change
             let mut window = Box::new(WinTrayIcon {
@@ -74,18 +71,12 @@ where
                 on_right_click,
                 on_double_click,
                 sender,
+                msg_taskbarcreated: None,
             });
-            // Take the window memory location and pass it to wndproc and
-            // subproc
-            //
-            // Note that inside wndproc the lParam is not fixed! Thus it doesn't
-            // always succeed in setting the lparam, this is the reason we need
-            // subproc which has a fixed parameter.
-            let ptr = window.as_mut();
-            let hwnd = CreateWindowExA(
+            let hwnd = winuser::CreateWindowExW(
                 0,
                 wnd_class_name.as_ptr() as _,
-                "TrayIcon\0".as_ptr() as *const i8,
+                wchar("TrayIcon").as_ptr() as _,
                 0, //winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE,
                 winuser::CW_USEDEFAULT,
                 winuser::CW_USEDEFAULT,
@@ -94,61 +85,33 @@ where
                 0 as _,
                 0 as HMENU,
                 hinstance,
-                ptr as *mut _ as LPVOID,
+                window.as_mut() as *mut _ as LPVOID,
             ) as u32;
-            if hwnd == 0 {
+
+            if hwnd == 0 || window.hwnd == 0 as HWND {
                 return Err(Error::OsError);
             }
-            let proc = commctrl::SetWindowSubclass(
-                hwnd as HWND,
-                Some(WinTrayIcon::<T>::subproc),
-                0,
-                ptr as *mut _ as usize,
-            );
-            if proc == 0 {
-                return Err(Error::OsError);
-            }
-            window.hwnd = hwnd as HWND;
+
             Ok(window)
         }
     }
 
-    // This serves as a conduit for actual winproc in the subproc
-    pub unsafe extern "system" fn winproc(
-        hwnd: HWND,
-        msg: UINT,
-        wparam: WPARAM,
-        lparam: LPARAM,
-    ) -> LRESULT {
+    pub fn wndproc(&mut self, msg: UINT, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+        // Note: The way this works it's not possible to catch WM_CLOSE,
+        // WM_DESTROY, WM_NCDESTROY because when the Window is dropped (see Drop
+        // implementation) it sends WM_CLOSE
+
         match msg {
             winuser::WM_CREATE => {
-                let hwnd = hwnd as u32;
-                winuser::PostMessageA(hwnd as HWND, msgs::WM_USER_CREATE, wparam, lparam);
-            }
-            _ => {
-                return DefWindowProcA(hwnd, msg, wparam, lparam);
-            }
-        }
-        0
-    }
+                // Create notification area icon
+                self.notify_icon.add(self.hwnd);
 
-    // Actual winproc
-    unsafe extern "system" fn subproc(
-        hwnd: HWND,
-        msg: UINT,
-        wparam: WPARAM,
-        lparam: LPARAM,
-        _id: UINT_PTR,
-        data: DWORD_PTR,
-    ) -> LRESULT {
-        static mut WM_TASKBARCREATED: u32 = u32::MAX;
-        let window: &mut WinTrayIcon<T> = &mut *(data as *mut _);
-        match msg {
-            // Window was created
-            msgs::WM_USER_CREATE => {
-                WM_TASKBARCREATED =
-                    winuser::RegisterWindowMessageA("TaskbarCreated\0".as_ptr() as _);
-                window.notify_icon.add(hwnd);
+                // Register to listen taskbar creation
+                self.msg_taskbarcreated = unsafe {
+                    Some(winuser::RegisterWindowMessageA(
+                        "TaskbarCreated\0".as_ptr() as _
+                    ))
+                };
             }
 
             // Mouse events on the tray icon
@@ -156,31 +119,33 @@ where
                 match lparam as u32 {
                     // Left click tray icon
                     winuser::WM_LBUTTONUP => {
-                        if let Some(e) = window.on_click.as_ref() {
-                            window.sender.send(e);
+                        if let Some(e) = self.on_click.as_ref() {
+                            self.sender.send(e);
                         }
                     }
 
                     // Right click tray icon
                     winuser::WM_RBUTTONUP => {
                         // Send right click event
-                        if let Some(e) = window.on_right_click.as_ref() {
-                            window.sender.send(e);
+                        if let Some(e) = self.on_right_click.as_ref() {
+                            self.sender.send(e);
                         }
 
                         // Show menu, if it's there
-                        if let Some(menu) = &window.menu {
+                        if let Some(menu) = &self.menu {
                             let mut pos = POINT { x: 0, y: 0 };
-                            winuser::GetCursorPos(&mut pos as _);
-                            winuser::SetForegroundWindow(hwnd);
-                            menu.menu.track(hwnd, pos.x, pos.y);
+                            unsafe {
+                                winuser::GetCursorPos(&mut pos as _);
+                                winuser::SetForegroundWindow(self.hwnd);
+                            }
+                            menu.menu.track(self.hwnd, pos.x, pos.y);
                         }
                     }
 
                     // Double click tray icon
                     winuser::WM_LBUTTONDBLCLK => {
-                        if let Some(e) = window.on_double_click.as_ref() {
-                            window.sender.send(e);
+                        if let Some(e) = self.on_double_click.as_ref() {
+                            self.sender.send(e);
                         }
                     }
                     _ => {}
@@ -196,29 +161,57 @@ where
 
                 // Menu command
                 if cmd == 0 {
-                    if let Some(v) = window.menu.as_ref() {
+                    if let Some(v) = self.menu.as_ref() {
                         if let Some(event) = v.ids.get(&(identifier as usize)) {
-                            window.sender.send(event);
+                            self.sender.send(event);
                         }
                     }
                 }
             }
 
-            // Destroy
-            winuser::WM_DESTROY => {
-                window.notify_icon.remove();
-            }
-
             // TaskbarCreated
-            x if x == WM_TASKBARCREATED => {
-                window.notify_icon.add(hwnd);
+            x if Some(x) == self.msg_taskbarcreated => {
+                self.notify_icon.add(self.hwnd);
             }
 
+            // Default
             _ => {
-                return commctrl::DefSubclassProc(hwnd, msg, wparam, lparam);
+                return unsafe { winuser::DefWindowProcW(self.hwnd, msg, wparam, lparam) };
             }
         }
         0
+    }
+
+    // This serves as a conduit for actual winproc in the subproc
+    pub unsafe extern "system" fn winproc(
+        hwnd: HWND,
+        msg: UINT,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> LRESULT {
+        match msg {
+            winuser::WM_CREATE => {
+                let create_struct: &mut winuser::CREATESTRUCTW = &mut *(lparam as *mut _);
+                let window: &mut WinTrayIcon<T> = &mut *(create_struct.lpCreateParams as *mut _);
+                window.hwnd = hwnd;
+                winuser::SetWindowLongPtrW(hwnd, winuser::GWL_USERDATA, window as *mut _ as _);
+                window.wndproc(msg, wparam, lparam)
+            }
+            winuser::WM_CLOSE => {
+                // winuser::SetWindowLongPtrW(hwnd, winuser::GWL_USERDATA, 0);
+                winuser::DestroyWindow(hwnd);
+                0
+            }
+            _ => {
+                let window_ptr = winuser::GetWindowLongPtrW(hwnd, winuser::GWL_USERDATA);
+                if window_ptr != 0 {
+                    let window: &mut WinTrayIcon<T> = &mut *(window_ptr as *mut _);
+                    window.wndproc(msg, wparam, lparam)
+                } else {
+                    winuser::DefWindowProcW(hwnd, msg, wparam, lparam)
+                }
+            }
+        }
     }
 }
 
@@ -258,7 +251,14 @@ where
     T: PartialEq + Clone + 'static,
 {
     fn drop(&mut self) {
-        // https://devblogs.microsoft.com/oldnewthing/20110926-00/?p=9553
-        unsafe { winuser::SendMessageA(self.hwnd, winuser::WM_CLOSE, 0, 0) };
+        self.notify_icon.remove();
+
+        unsafe {
+            // Does this work if drop happens of different thread?
+            winuser::SetWindowLongPtrW(self.hwnd, winuser::GWL_USERDATA, 0);
+
+            // https://devblogs.microsoft.com/oldnewthing/20110926-00/?p=9553
+            winuser::PostMessageW(self.hwnd, winuser::WM_CLOSE, 0, 0)
+        };
     }
 }

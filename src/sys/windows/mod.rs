@@ -123,7 +123,6 @@ where
 
 // For pattern matching, these are in own mod
 mod msgs {
-    pub const WM_USER_CREATE: u32 = 0x400 + 1000;
     pub const WM_USER_TRAYICON: u32 = 0x400 + 1001;
 }
 

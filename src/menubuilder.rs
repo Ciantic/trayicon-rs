@@ -181,16 +181,17 @@ where
         if let Some(item) = found_item {
             f(item)
         } else {
-            // Try to recurse, if submenus exist
-            let maybe_found_submenu = self.menu_items.iter_mut().find(|i| match i {
-                MenuItem::Submenu { .. } => true,
-                _ => false,
-            });
-            if let Some(found_submenu) = maybe_found_submenu {
-                if let MenuItem::Submenu { children, .. } = found_submenu {
-                    return children._mutate_item_recurse_ref(find_id, f);
-                }
+            // Try to find submenu
+            let maybe_found_submenu = self
+                .menu_items
+                .iter_mut()
+                .find(|i| matches!(i, MenuItem::Submenu { .. }));
+
+            // Reurse
+            if let Some(MenuItem::Submenu { children, .. }) = maybe_found_submenu {
+                return children._mutate_item_recurse_ref(find_id, f);
             }
+
             Err(Error::MenuItemNotFound)
         }
     }
