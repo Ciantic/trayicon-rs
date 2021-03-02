@@ -5,7 +5,7 @@ mod winnotifyicon;
 mod wintrayicon;
 
 use std::collections::HashMap;
-use wintrayicon::WinTrayIcon;
+use wintrayicon::WinTrayIconImpl;
 
 use crate::{Error, MenuBuilder, MenuItem, TrayIconBuilder};
 use winhmenu::WinHMenu;
@@ -25,7 +25,7 @@ where
 }
 
 /// Build the tray icon
-pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<Box<WinTrayIcon<T>>, Error>
+pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<TrayIconSys<T>, Error>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -43,7 +43,7 @@ where
         menu = Some(rhmenu.build()?);
     }
 
-    Ok(WinTrayIcon::new(
+    Ok(WinTrayIconImpl::new(
         sender,
         menu,
         notify_icon,

@@ -8,11 +8,13 @@ use super::wchar::wchar;
 use super::{msgs, winnotifyicon::WinNotifyIcon, MenuSys};
 use crate::{trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase};
 
+pub type WinTrayIcon<T> = Box<WinTrayIconImpl<T>>;
+
 /// Tray Icon WINAPI Window
 ///
 /// In Windows the Tray Icon requires a window for message pump, it's not shown.
 #[derive(Debug)]
-pub struct WinTrayIcon<T>
+pub struct WinTrayIconImpl<T>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -26,10 +28,10 @@ where
     msg_taskbarcreated: Option<UINT>,
 }
 
-unsafe impl<T> Send for WinTrayIcon<T> where T: PartialEq + Clone {}
-unsafe impl<T> Sync for WinTrayIcon<T> where T: PartialEq + Clone {}
+unsafe impl<T> Send for WinTrayIconImpl<T> where T: PartialEq + Clone {}
+unsafe impl<T> Sync for WinTrayIconImpl<T> where T: PartialEq + Clone {}
 
-impl<T> WinTrayIcon<T>
+impl<T> WinTrayIconImpl<T>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -41,7 +43,7 @@ where
         on_click: Option<T>,
         on_double_click: Option<T>,
         on_right_click: Option<T>,
-    ) -> Result<Box<WinTrayIcon<T>>, Error>
+    ) -> Result<WinTrayIcon<T>, Error>
     where
         T: PartialEq + Clone + 'static,
     {
@@ -50,7 +52,7 @@ where
             let wnd_class_name = wchar("TrayIconCls");
             let wnd_class = winuser::WNDCLASSW {
                 style: 0,
-                lpfnWndProc: Some(WinTrayIcon::<T>::winproc),
+                lpfnWndProc: Some(WinTrayIconImpl::<T>::winproc),
                 hInstance: hinstance,
                 lpszClassName: wnd_class_name.as_ptr() as _,
                 cbClsExtra: 0,
@@ -63,7 +65,7 @@ where
             winuser::RegisterClassW(&wnd_class);
 
             // Create window in a memory location that doesn't change
-            let mut window = Box::new(WinTrayIcon {
+            let mut window = Box::new(WinTrayIconImpl {
                 hwnd: 0 as HWND,
                 notify_icon,
                 menu,
@@ -192,7 +194,8 @@ where
         match msg {
             winuser::WM_CREATE => {
                 let create_struct: &mut winuser::CREATESTRUCTW = &mut *(lparam as *mut _);
-                let window: &mut WinTrayIcon<T> = &mut *(create_struct.lpCreateParams as *mut _);
+                let window: &mut WinTrayIconImpl<T> =
+                    &mut *(create_struct.lpCreateParams as *mut _);
                 window.hwnd = hwnd;
                 winuser::SetWindowLongPtrW(hwnd, winuser::GWL_USERDATA, window as *mut _ as _);
                 window.wndproc(msg, wparam, lparam)
@@ -205,7 +208,7 @@ where
             _ => {
                 let window_ptr = winuser::GetWindowLongPtrW(hwnd, winuser::GWL_USERDATA);
                 if window_ptr != 0 {
-                    let window: &mut WinTrayIcon<T> = &mut *(window_ptr as *mut _);
+                    let window: &mut WinTrayIconImpl<T> = &mut *(window_ptr as *mut _);
                     window.wndproc(msg, wparam, lparam)
                 } else {
                     winuser::DefWindowProcW(hwnd, msg, wparam, lparam)
@@ -215,7 +218,7 @@ where
     }
 }
 
-impl<T> TrayIconBase<T> for WinTrayIcon<T>
+impl<T> TrayIconBase<T> for WinTrayIconImpl<T>
 where
     T: PartialEq + Clone + 'static,
 {
@@ -246,7 +249,7 @@ where
     }
 }
 
-impl<T> Drop for WinTrayIcon<T>
+impl<T> Drop for WinTrayIconImpl<T>
 where
     T: PartialEq + Clone + 'static,
 {

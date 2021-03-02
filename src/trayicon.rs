@@ -4,7 +4,7 @@ pub struct TrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    sys: Box<crate::TrayIconSys<T>>,
+    sys: crate::TrayIconSys<T>,
     builder: TrayIconBuilder<T>,
 }
 
@@ -12,7 +12,7 @@ impl<T> TrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    pub(crate) fn new(sys: Box<crate::TrayIconSys<T>>, builder: TrayIconBuilder<T>) -> TrayIcon<T> {
+    pub(crate) fn new(sys: crate::TrayIconSys<T>, builder: TrayIconBuilder<T>) -> TrayIcon<T> {
         TrayIcon { builder, sys }
     }
 
