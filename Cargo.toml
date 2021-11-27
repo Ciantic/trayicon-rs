@@ -1,6 +1,6 @@
 [package]
 name = "trayicon"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Jari Otto Oskari Pennanen <ciantic@oksidi.com>"]
 edition = "2018"
 description = "Tray Icon, that thing in the corner"
@@ -13,7 +13,7 @@ repository = "https://github.com/ciantic/trayicon-rs/"
 winapi = { version = "0.3.9", features = ["winuser", "windef", "minwindef", "shellapi", "libloaderapi", "basetsd"] }
 
 [dependencies]
-winit = { version = "0.24", optional = true }
+winit = { version = "0.25", optional = true }
 crossbeam-channel = { version = "0.5", optional = true }
 
 [lib]
