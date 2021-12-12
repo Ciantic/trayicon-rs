@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::{trayiconsender::TrayIconSender, Icon, MenuBuilder, TrayIcon};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,6 +15,15 @@ impl From<&Error> for Error {
     fn from(e: &Error) -> Self {
         *e
     }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::error::Error for Error {
 }
 
 /// Tray Icon builder
