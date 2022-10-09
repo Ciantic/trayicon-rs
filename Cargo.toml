@@ -1,6 +1,6 @@
 [package]
 name = "trayicon"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Jari Otto Oskari Pennanen <ciantic@oksidi.com>"]
 edition = "2018"
 description = "Tray Icon, that thing in the corner"
@@ -29,6 +29,7 @@ members = [
     "examples/winit",
     "examples/winapi",
     "examples/crossbeam",
+    "examples/winit-callback",
 ]
 
 [features]
