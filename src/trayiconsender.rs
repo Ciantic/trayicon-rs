@@ -1,16 +1,19 @@
 /// Tray Icon event sender
-#[derive(Debug, Clone)]
-pub enum TrayIconSender<T>
-where
-    T: PartialEq + Clone + 'static,
-{
-    Std(std::sync::mpsc::Sender<T>),
+#[derive(Clone)]
+pub(crate) struct TrayIconSender<T>(std::sync::Arc<dyn Fn(&T)>);
 
-    #[cfg(feature = "winit")]
-    Winit(winit::event_loop::EventLoopProxy<T>),
+impl<T> std::fmt::Debug for TrayIconSender<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TrayIconSender")
+            .field("0", &"<function>")
+            .finish()
+    }
+}
 
-    #[cfg(feature = "crossbeam-channel")]
-    Crossbeam(crossbeam_channel::Sender<T>),
+impl<T> TrayIconSender<T> {
+    pub(crate) fn new(f: impl Fn(&T) + 'static) -> Self {
+        TrayIconSender(std::sync::Arc::new(f))
+    }
 }
 
 impl<T> TrayIconSender<T>
@@ -18,18 +21,6 @@ where
     T: PartialEq + Clone + 'static,
 {
     pub fn send(&self, e: &T) {
-        match self {
-            TrayIconSender::Std(s) => {
-                let _ = s.send(e.clone());
-            }
-            #[cfg(feature = "winit")]
-            TrayIconSender::Winit(s) => {
-                let _ = s.send_event(e.clone());
-            }
-            #[cfg(feature = "crossbeam-channel")]
-            TrayIconSender::Crossbeam(s) => {
-                let _ = s.try_send(e.clone());
-            }
-        }
+        self.0(e)
     }
 }
