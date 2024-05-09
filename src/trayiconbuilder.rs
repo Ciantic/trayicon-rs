@@ -27,15 +27,6 @@ impl std::error::Error for Error {}
 
 /// Tray Icon builder
 ///
-/// Start by choosing an event sender implementation. There are three different
-/// senders depending on the optional features. By default the sender function
-/// uses `std::sync::mpsc::Sender<T>`, additionally if `winit` feature is
-/// enabled you can choose to use `winit::event_loop::EventLoopProxy<T>` or with
-/// `crossbeam-channel` feature the `crossbeam_channel::Sender<T>` is available.
-///
-/// This is defined as consuming builder, this includes conditional helper
-/// `when` for composing conditionally some settings.
-///
 /// [Open full example with winit here 🢅](https://github.com/Ciantic/trayicon-rs/blob/master/examples/winit/src/main.rs)
 #[derive(Debug, Clone)]
 pub struct TrayIconBuilder<T>
