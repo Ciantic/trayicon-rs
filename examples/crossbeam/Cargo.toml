@@ -6,6 +6,14 @@ edition = "2018"
 publish = false
 
 [dependencies]
-winapi = { version = "0.3.9", features = ["winuser", "windef", "minwindef", "shellapi", "libloaderapi", "commctrl", "basetsd"] }
+winapi = { version = "0.3.9", features = [
+    "winuser",
+    "windef",
+    "minwindef",
+    "shellapi",
+    "libloaderapi",
+    "commctrl",
+    "basetsd",
+] }
 crossbeam-channel = "0.5"
-trayicon = { path = "../../", features = ["crossbeam-channel"] }
+trayicon = { path = "../../" }

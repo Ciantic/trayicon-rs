@@ -34,7 +34,9 @@ fn main() {
 
     // Needlessly complicated tray icon with all the whistles and bells
     let tray_icon = TrayIconBuilder::new()
-        .sender_winit(proxy)
+        .sender(move |e: &UserEvents| {
+            let _ = proxy.send_event(e.clone());
+        })
         .icon_from_buffer(icon)
         .tooltip("Cool Tray 👀 Icon")
         .on_click(UserEvents::ClickTrayIcon)

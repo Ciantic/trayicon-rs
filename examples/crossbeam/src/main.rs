@@ -27,7 +27,9 @@ fn main() {
 
     // Needlessly complicated tray icon with all the whistles and bells
     let mut tray_icon = TrayIconBuilder::new()
-        .sender_crossbeam(s)
+        .sender(move |e| {
+            let _ = s.send(*e);
+        })
         .icon_from_buffer(icon)
         .tooltip("Cool Tray 👀 Icon")
         .on_click(Events::ClickTrayIcon)

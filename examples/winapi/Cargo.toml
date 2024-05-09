@@ -6,5 +6,13 @@ edition = "2018"
 publish = false
 
 [dependencies]
-winapi = { version = "0.3.9", features = ["winuser", "windef", "minwindef", "shellapi", "libloaderapi", "commctrl", "basetsd"] }
-trayicon = { path = "../../", features = [] }
+winapi = { version = "0.3.9", features = [
+    "winuser",
+    "windef",
+    "minwindef",
+    "shellapi",
+    "libloaderapi",
+    "commctrl",
+    "basetsd",
+] }
+trayicon = { path = "../../" }
