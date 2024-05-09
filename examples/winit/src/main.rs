@@ -1,13 +1,14 @@
 use winit::{
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    application::ApplicationHandler,
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, EventLoop},
+    window::Window,
 };
 
-use trayicon::{Icon, MenuBuilder, MenuItem, TrayIconBuilder};
+use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-enum Events {
+enum UserEvents {
     ClickTrayIcon,
     DoubleClickTrayIcon,
     Exit,
@@ -23,103 +24,142 @@ enum Events {
 }
 
 fn main() {
-    let event_loop = EventLoop::<Events>::with_user_event();
-    let your_app_window = WindowBuilder::new().build(&event_loop).unwrap();
+    let event_loop = EventLoop::<UserEvents>::with_user_event().build().unwrap();
     let proxy = event_loop.create_proxy();
+
     let icon = include_bytes!("../../../src/testresource/icon1.ico");
     let icon2 = include_bytes!("../../../src/testresource/icon2.ico");
-
     let second_icon = Icon::from_buffer(icon2, None, None).unwrap();
     let first_icon = Icon::from_buffer(icon, None, None).unwrap();
 
     // Needlessly complicated tray icon with all the whistles and bells
-    let mut tray_icon = TrayIconBuilder::new()
+    let tray_icon = TrayIconBuilder::new()
         .sender_winit(proxy)
         .icon_from_buffer(icon)
         .tooltip("Cool Tray 👀 Icon")
-        .on_click(Events::ClickTrayIcon)
-        .on_double_click(Events::DoubleClickTrayIcon)
+        .on_click(UserEvents::ClickTrayIcon)
+        .on_double_click(UserEvents::DoubleClickTrayIcon)
         .menu(
             MenuBuilder::new()
-                .item("Item 4 Set Tooltip", Events::Item4)
-                .item("Item 3 Replace Menu 👍", Events::Item3)
-                .item("Item 2 Change Icon Green", Events::Item2)
-                .item("Item 1 Change Icon Red", Events::Item1)
+                .item("Item 4 Set Tooltip", UserEvents::Item4)
+                .item("Item 3 Replace Menu 👍", UserEvents::Item3)
+                .item("Item 2 Change Icon Green", UserEvents::Item2)
+                .item("Item 1 Change Icon Red", UserEvents::Item1)
                 .separator()
                 .submenu(
                     "Sub Menu",
                     MenuBuilder::new()
-                        .item("Sub item 1", Events::SubItem1)
-                        .item("Sub Item 2", Events::SubItem2)
-                        .item("Sub Item 3", Events::SubItem3),
+                        .item("Sub item 1", UserEvents::SubItem1)
+                        .item("Sub Item 2", UserEvents::SubItem2)
+                        .item("Sub Item 3", UserEvents::SubItem3),
                 )
-                .checkable("This checkbox toggles disable", true, Events::CheckItem1)
+                .checkable(
+                    "This checkbox toggles disable",
+                    true,
+                    UserEvents::CheckItem1,
+                )
                 .with(MenuItem::Item {
                     name: "Item Disabled".into(),
                     disabled: true, // Disabled entry example
-                    id: Events::DisabledItem1,
+                    id: UserEvents::DisabledItem1,
                     icon: Result::ok(Icon::from_buffer(icon, None, None)),
                 })
                 .separator()
-                .item("E&xit", Events::Exit),
+                .item("E&xit", UserEvents::Exit),
         )
         .build()
         .unwrap();
 
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Wait;
+    let mut app = MyApplication {
+        window: None,
+        tray_icon,
+        first_icon,
+        second_icon,
+    };
+    event_loop.run_app(&mut app).unwrap();
+}
 
-        // Move the tray_icon to the main loop (even if you don't use it)
-        //
-        // Tray icon uses normal message pump from winit, for orderly closure
-        // and removal of the tray icon when you exit it must be moved inside.
-        let _ = tray_icon;
+struct MyApplication {
+    window: Option<Window>,
+    tray_icon: TrayIcon<UserEvents>,
+    first_icon: Icon,
+    second_icon: Icon,
+}
 
+impl ApplicationHandler<UserEvents> for MyApplication {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        self.window = Some(
+            event_loop
+                .create_window(Window::default_attributes())
+                .unwrap(),
+        );
+    }
+
+    // Platform specific events
+    fn window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        _window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
         match event {
-            // Main window events
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                window_id,
-            } if window_id == your_app_window.id() => *control_flow = ControlFlow::Exit,
-
-            // User events
-            Event::UserEvent(e) => match e {
-                Events::Exit => *control_flow = ControlFlow::Exit,
-                Events::CheckItem1 => {
-                    // You can mutate single checked, disabled value followingly.
-                    //
-                    // However, I think better way is to use reactively
-                    // `set_menu` by building the menu based on application
-                    // state.
-                    if let Some(old_value) = tray_icon.get_menu_item_checkable(Events::CheckItem1) {
-                        // Set checkable example
-                        let _ = tray_icon.set_menu_item_checkable(Events::CheckItem1, !old_value);
-
-                        // Set disabled example
-                        let _ = tray_icon.set_menu_item_disabled(Events::DisabledItem1, !old_value);
-                    }
-                }
-                Events::Item1 => {
-                    tray_icon.set_icon(&second_icon).unwrap();
-                }
-                Events::Item2 => {
-                    tray_icon.set_icon(&first_icon).unwrap();
-                }
-                Events::Item3 => {
-                    tray_icon
-                        .set_menu(
-                            &MenuBuilder::new()
-                                .item("Another item", Events::Item1)
-                                .item("Exit", Events::Exit),
-                        )
-                        .unwrap();
-                }
-                Events::Item4 => {
-                    tray_icon.set_tooltip("Menu changed!").unwrap();
-                }
-                e => println!("Got event {:?}", e),
-            },
-            _ => (),
+            WindowEvent::CloseRequested => {
+                event_loop.exit();
+            }
+            _ => {}
         }
-    });
+    }
+
+    // Application specific events
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvents) {
+        match event {
+            UserEvents::Exit => event_loop.exit(),
+            UserEvents::CheckItem1 => {
+                // You can mutate single checked, disabled value followingly.
+                //
+                // However, I think better way is to use reactively
+                // `set_menu` by building the menu based on application
+                // state.
+                if let Some(old_value) = self
+                    .tray_icon
+                    .get_menu_item_checkable(UserEvents::CheckItem1)
+                {
+                    // Set checkable example
+                    let _ = self
+                        .tray_icon
+                        .set_menu_item_checkable(UserEvents::CheckItem1, !old_value);
+
+                    // Set disabled example
+                    let _ = self
+                        .tray_icon
+                        .set_menu_item_disabled(UserEvents::DisabledItem1, !old_value);
+                }
+            }
+            UserEvents::Item1 => {
+                self.tray_icon.set_icon(&self.second_icon).unwrap();
+            }
+            UserEvents::Item2 => {
+                self.tray_icon.set_icon(&self.first_icon).unwrap();
+            }
+            UserEvents::Item3 => {
+                self.tray_icon
+                    .set_menu(
+                        &MenuBuilder::new()
+                            .item("Another item", UserEvents::Item1)
+                            .item("Exit", UserEvents::Exit),
+                    )
+                    .unwrap();
+            }
+            UserEvents::Item4 => {
+                self.tray_icon.set_tooltip("Menu changed!").unwrap();
+            }
+            // Events::ClickTrayIcon => todo!(),
+            // Events::DoubleClickTrayIcon => todo!(),
+            // Events::DisabledItem1 => todo!(),
+            // Events::SubItem1 => todo!(),
+            // Events::SubItem2 => todo!(),
+            // Events::SubItem3 => todo!(),
+            _ => {}
+        }
+    }
 }
