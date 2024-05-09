@@ -9,7 +9,8 @@ use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum UserEvents {
-    ClickTrayIcon,
+    RightClickTrayIcon,
+    LeftClickTrayIcon,
     DoubleClickTrayIcon,
     Exit,
     Item1,
@@ -39,8 +40,9 @@ fn main() {
         })
         .icon_from_buffer(icon)
         .tooltip("Cool Tray 👀 Icon")
-        .on_click(UserEvents::ClickTrayIcon)
+        .on_click(UserEvents::LeftClickTrayIcon)
         .on_double_click(UserEvents::DoubleClickTrayIcon)
+        .on_right_click(UserEvents::RightClickTrayIcon)
         .menu(
             MenuBuilder::new()
                 .item("Item 4 Set Tooltip", UserEvents::Item4)
@@ -116,6 +118,9 @@ impl ApplicationHandler<UserEvents> for MyApplication {
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvents) {
         match event {
             UserEvents::Exit => event_loop.exit(),
+            UserEvents::RightClickTrayIcon => {
+                self.tray_icon.show_menu().unwrap();
+            }
             UserEvents::CheckItem1 => {
                 // You can mutate single checked, disabled value followingly.
                 //
@@ -155,7 +160,9 @@ impl ApplicationHandler<UserEvents> for MyApplication {
             UserEvents::Item4 => {
                 self.tray_icon.set_tooltip("Menu changed!").unwrap();
             }
-            // Events::ClickTrayIcon => todo!(),
+            UserEvents::LeftClickTrayIcon => {
+                self.tray_icon.show_menu().unwrap();
+            }
             // Events::DoubleClickTrayIcon => todo!(),
             // Events::DisabledItem1 => todo!(),
             // Events::SubItem1 => todo!(),

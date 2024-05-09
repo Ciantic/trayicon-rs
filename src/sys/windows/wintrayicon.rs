@@ -157,6 +157,17 @@ where
                 };
             }
 
+            msgs::WM_USER_SHOW_MENU => {
+                if let Some(menu) = &self.menu {
+                    let mut pos = POINT { x: 0, y: 0 };
+                    unsafe {
+                        winuser::GetCursorPos(&mut pos as _);
+                        winuser::SetForegroundWindow(self.hwnd);
+                    }
+                    menu.menu.track(self.hwnd, pos.x, pos.y);
+                }
+            }
+
             // Mouse events on the tray icon
             msgs::WM_USER_TRAYICON => {
                 match lparam as u32 {
@@ -172,16 +183,6 @@ where
                         // Send right click event
                         if let Some(e) = self.on_right_click.as_ref() {
                             self.sender.send(e);
-                        }
-
-                        // Show menu, if it's there
-                        if let Some(menu) = &self.menu {
-                            let mut pos = POINT { x: 0, y: 0 };
-                            unsafe {
-                                winuser::GetCursorPos(&mut pos as _);
-                                winuser::SetForegroundWindow(self.hwnd);
-                            }
-                            menu.menu.track(self.hwnd, pos.x, pos.y);
                         }
                     }
 
@@ -291,6 +292,16 @@ where
             self.menu = None
         } else {
             self.menu = Some(menu.build()?);
+        }
+        Ok(())
+    }
+
+    /// Show menu
+    ///
+    /// Currently shows always in mouse cursor coordinates
+    fn show_menu(&mut self) -> Result<(), Error> {
+        unsafe {
+            winuser::PostMessageW(self.hwnd, msgs::WM_USER_SHOW_MENU, 0, 0);
         }
         Ok(())
     }

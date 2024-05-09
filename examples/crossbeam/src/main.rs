@@ -5,7 +5,8 @@ use winapi::um::winuser;
 fn main() {
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     enum Events {
-        ClickTrayIcon,
+        RightClickTrayIcon,
+        LeftClickTrayIcon,
         DoubleClickTrayIcon,
         Exit,
         Item1,
@@ -32,7 +33,8 @@ fn main() {
         })
         .icon_from_buffer(icon)
         .tooltip("Cool Tray 👀 Icon")
-        .on_click(Events::ClickTrayIcon)
+        .on_right_click(Events::RightClickTrayIcon)
+        .on_click(Events::LeftClickTrayIcon)
         .on_double_click(Events::DoubleClickTrayIcon)
         .menu(
             MenuBuilder::new()
@@ -62,14 +64,18 @@ fn main() {
 
     std::thread::spawn(move || {
         r.iter().for_each(|m| match m {
+            Events::RightClickTrayIcon => {
+                tray_icon.show_menu().unwrap();
+            }
             Events::DoubleClickTrayIcon => {
                 println!("Double click");
             }
-            Events::ClickTrayIcon => {
-                println!("Single click");
+            Events::LeftClickTrayIcon => {
+                tray_icon.show_menu().unwrap();
             }
             Events::Exit => {
                 println!("Please exit");
+                std::process::exit(0);
             }
             Events::Item1 => {
                 tray_icon.set_icon(&second_icon).unwrap();

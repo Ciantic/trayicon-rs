@@ -124,6 +124,7 @@ where
 // For pattern matching, these are in own mod
 mod msgs {
     pub const WM_USER_TRAYICON: u32 = 0x400 + 1001;
+    pub const WM_USER_SHOW_MENU: u32 = 0x400 + 1002;
 }
 
 #[cfg(test)]

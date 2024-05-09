@@ -86,6 +86,10 @@ where
             None
         }
     }
+
+    pub fn show_menu(&mut self) -> Result<(), Error> {
+        self.sys.show_menu()
+    }
 }
 
 unsafe impl<T> Sync for TrayIcon<T> where T: PartialEq + Clone + 'static {}

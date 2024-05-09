@@ -44,6 +44,7 @@ where
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;
     fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error>;
+    fn show_menu(&mut self) -> Result<(), Error>;
 }
 
 /// IconSys must implement this
