@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use crate::{trayiconsender::TrayIconSender, Icon, MenuBuilder, TrayIcon};
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Error {
@@ -23,8 +23,7 @@ impl Display for Error {
     }
 }
 
-impl std::error::Error for Error {
-}
+impl std::error::Error for Error {}
 
 /// Tray Icon builder
 ///
@@ -77,22 +76,8 @@ where
         f(self)
     }
 
-    pub fn sender(mut self, s: std::sync::mpsc::Sender<T>) -> Self {
-        self.sender = Some(TrayIconSender::Std(s));
-        self
-    }
-
-    /// Optional feature, requires `winit` feature
-    #[cfg(feature = "winit")]
-    pub fn sender_winit(mut self, s: winit::event_loop::EventLoopProxy<T>) -> Self {
-        self.sender = Some(TrayIconSender::Winit(s));
-        self
-    }
-
-    /// Optional feature, requires `crossbeam-channel` feature
-    #[cfg(feature = "crossbeam-channel")]
-    pub fn sender_crossbeam(mut self, s: crossbeam_channel::Sender<T>) -> Self {
-        self.sender = Some(TrayIconSender::Crossbeam(s));
+    pub fn sender(mut self, cb: impl Fn(&T) + 'static) -> Self {
+        self.sender = Some(TrayIconSender::new(cb));
         self
     }
 
