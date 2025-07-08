@@ -33,7 +33,7 @@ default-target = "x86_64-pc-windows-msvc"
 all-features = true
 
 [workspace]
-members = ["examples/winit", "examples/winapi", "examples/crossbeam"]
+members = ["examples/winit", "examples/winapi", "examples/crossbeam", "examples/macos"]
 
 [features]
 default = []
