@@ -30,6 +30,13 @@ impl IconBase for MacIcon {
     }
 }
 
+impl MacIcon {
+    pub fn set_template(&mut self, template: bool) {
+        unsafe {
+            let _: () = msg_send![&self.ns_image, setTemplate: template];
+        }
+    }
+}
 // Drop is handled automatically by Id<NSImage>
 
 unsafe impl Send for MacIcon {}

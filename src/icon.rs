@@ -24,6 +24,15 @@ impl Icon {
             sys: crate::IconSys::from_buffer(buffer, width, height)?,
         })
     }
+
+    // Sets the icon template mode.
+    // This is only applicable on macOS.
+    // It allows the icon to be rendered as a template image,
+    // which is useful for monochrome icons in the menu bar.
+    #[cfg(target_os = "macos")]
+    pub fn set_template(&mut self, _template: bool) {
+        self.sys.set_template(_template);
+    }
 }
 
 impl PartialEq for Icon {
