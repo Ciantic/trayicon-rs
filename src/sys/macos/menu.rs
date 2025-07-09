@@ -1,7 +1,7 @@
 use crate::{trayiconsender::TrayIconSender, Error, MenuBuilder, MenuItem};
-use objc2::rc::{Allocated, Id};
+use objc2::rc::{Allocated, Retained};
 use objc2::runtime::Sel;
-use objc2::{class, msg_send, msg_send_id, declare_class, mutability, ClassType, DeclaredClass};
+use objc2::{class, msg_send, define_class, DeclaredClass, MainThreadOnly};
 use objc2_app_kit::{NSMenu, NSMenuItem};
 use objc2_foundation::{MainThreadMarker, NSString, NSObject};
 use std::cell::RefCell;
@@ -10,26 +10,23 @@ use std::sync::{Arc, Mutex};
 
 // Menu target handler that receives menu item clicks
 
-declare_class!(
+pub struct MenuTargetIvars {
+    callback: RefCell<Option<Box<dyn Fn(isize)>>>,
+}
+
+define_class!(
+    #[unsafe(super(NSObject))]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = MenuTargetIvars]
+    #[derive(PartialEq, Eq, Hash)]
     pub struct MenuTarget;
 
-    unsafe impl ClassType for MenuTarget {
-        type Super = NSObject;
-        type Mutability = mutability::InteriorMutable;
-        const NAME: &'static str = "MenuTarget";
-    }
-
-    impl DeclaredClass for MenuTarget {
-        type Ivars = RefCell<Option<Box<dyn Fn(isize)>>>; // Use RefCell for interior mutability
-    }
-
-    unsafe impl MenuTarget {
-        #[method(menuItemClicked:)]
+    impl MenuTarget {
+        #[unsafe(method(menuItemClicked:))]
         fn menu_item_clicked(&self, sender: &NSMenuItem) {
             let tag = unsafe { sender.tag() };
-            // Get the callback function from ivars and call it
             let ivars = self.ivars();
-            if let Some(ref callback) = *ivars.borrow() {
+            if let Some(ref callback) = *ivars.callback.borrow() {
                 callback(tag);
             }
         }
@@ -38,19 +35,23 @@ declare_class!(
 
 impl MenuTarget {
     fn new<T: PartialEq + Clone + 'static>(
-        sender: TrayIconSender<T>, 
+        sender: TrayIconSender<T>,
         menu_ids: Arc<Mutex<HashMap<isize, T>>>
-    ) -> Id<Self> {
+    ) -> Retained<Self> {
         let callback: Box<dyn Fn(isize)> = Box::new(move |tag| {
             let menu_ids = menu_ids.lock().unwrap();
             if let Some(event_id) = menu_ids.get(&tag) {
                 sender.send(event_id);
             }
         });
-        
-        let this = Self::alloc();
-        let this = this.set_ivars(RefCell::new(Some(callback)));
-        unsafe { msg_send_id![super(this), init] }
+
+        let ivars = MenuTargetIvars {
+            callback: RefCell::new(Some(callback)),
+        };
+
+        let mtm = unsafe { MainThreadMarker::new_unchecked() };
+        let this = mtm.alloc().set_ivars(ivars);
+        unsafe { msg_send![super(this), init] }
     }
 }
 
@@ -58,7 +59,7 @@ impl Drop for MenuTarget {
     fn drop(&mut self) {
         // Clean up the callback by taking it from the RefCell
         let ivars = self.ivars();
-        let _ = ivars.borrow_mut().take(); // This will drop the Box<dyn Fn(isize)>
+        let _ = ivars.callback.borrow_mut().take(); // This will drop the Box<dyn Fn(isize)>
     }
 }
 
@@ -67,8 +68,8 @@ where
     T: PartialEq + Clone + 'static,
 {
     pub(crate) ids: HashMap<usize, T>,
-    pub(crate) menu: Id<NSMenu>,
-    pub(crate) target: Id<MenuTarget>,
+    pub(crate) menu: Retained<NSMenu>,
+    pub(crate) target: Retained<MenuTarget>,
     pub(crate) menu_ids: Arc<Mutex<HashMap<isize, T>>>,
 }
 
@@ -81,7 +82,7 @@ where
     let menu_ids = Arc::new(Mutex::new(HashMap::new()));
     let target = MenuTarget::new(sender.clone(), menu_ids.clone());
     let result = build_menu_inner(&mut j, builder, &target, &menu_ids)?;
-    
+
     Ok(MacMenu {
         ids: result.ids,
         menu: result.menu,
@@ -92,9 +93,9 @@ where
 
 /// Recursive menu builder
 fn build_menu_inner<T>(
-    j: &mut usize, 
+    j: &mut usize,
     builder: &MenuBuilder<T>,
-    target: &MenuTarget,
+    target: &Retained<MenuTarget>,
     menu_ids: &Arc<Mutex<HashMap<isize, T>>>
 ) -> Result<MacMenu<T>, Error>
 where
@@ -128,11 +129,10 @@ where
                     let ns_title = NSString::from_str(name);
                     let empty_str = NSString::new();
                     let menu_item = unsafe {
-                        let allocated: Allocated<NSMenuItem> =
-                            msg_send_id![class!(NSMenuItem), alloc];
-                        let menu_item: Id<NSMenuItem> = msg_send_id![allocated,
-                            initWithTitle: &*ns_title
-                            action: None::<Sel>
+                        let allocated: Allocated<NSMenuItem> = msg_send![class!(NSMenuItem), alloc];
+                        let menu_item: Retained<NSMenuItem> = msg_send![allocated,
+                            initWithTitle: &*ns_title,
+                            action: None::<Sel>,
                             keyEquivalent: &*empty_str
                         ];
                         menu_item
@@ -159,11 +159,11 @@ where
                 let ns_title = NSString::from_str(name);
                 let empty_str = NSString::new();
                 let menu_item = unsafe {
-                    let allocated: Allocated<NSMenuItem> = msg_send_id![class!(NSMenuItem), alloc];
-                    let action_sel = Sel::register("menuItemClicked:");
-                    let menu_item: Id<NSMenuItem> = msg_send_id![allocated,
-                        initWithTitle: &*ns_title
-                        action: Some(action_sel)
+                    let allocated: Allocated<NSMenuItem> = msg_send![class!(NSMenuItem), alloc];
+                    let action_sel = Sel::register(c"menuItemClicked:");
+                    let menu_item: Retained<NSMenuItem> = msg_send![allocated,
+                        initWithTitle: &*ns_title,
+                        action: Some(action_sel),
                         keyEquivalent: &*empty_str
                     ];
                     menu_item
@@ -176,7 +176,7 @@ where
                     let _: () = msg_send![&menu_item, setState: if *is_checked { 1_isize } else { 0_isize }];
                     menu.addItem(&menu_item);
                 }
-                
+
                 // Add to menu_ids mapping
                 {
                     let mut menu_ids_lock = menu_ids.lock().unwrap();
@@ -193,11 +193,11 @@ where
                 let ns_title = NSString::from_str(name);
                 let empty_str = NSString::new();
                 let menu_item = unsafe {
-                    let allocated: Allocated<NSMenuItem> = msg_send_id![class!(NSMenuItem), alloc];
-                    let action_sel = Sel::register("menuItemClicked:");
-                    let menu_item: Id<NSMenuItem> = msg_send_id![allocated,
-                        initWithTitle: &*ns_title
-                        action: Some(action_sel)
+                    let allocated: Allocated<NSMenuItem> = msg_send![class!(NSMenuItem), alloc];
+                    let action_sel = Sel::register(c"menuItemClicked:");
+                    let menu_item: Retained<NSMenuItem> = msg_send![allocated,
+                        initWithTitle: &*ns_title,
+                        action: Some(action_sel),
                         keyEquivalent: &*empty_str
                     ];
                     menu_item
@@ -209,7 +209,7 @@ where
                     menu_item.setEnabled(!disabled);
                     menu.addItem(&menu_item);
                 }
-                
+
                 // Add to menu_ids mapping
                 {
                     let mut menu_ids_lock = menu_ids.lock().unwrap();
@@ -224,11 +224,11 @@ where
         }
     }
 
-    Ok(MacMenu { 
-        ids: map, 
-        menu, 
-        target: target.retain(), 
-        menu_ids: menu_ids.clone() 
+    Ok(MacMenu {
+        ids: map,
+        menu,
+        target: target.clone(),
+        menu_ids: menu_ids.clone()
     })
 }
 
@@ -237,11 +237,11 @@ impl<T: PartialEq + Clone + 'static> MacMenu<T> {
     pub fn update_sender(&mut self, sender: &TrayIconSender<T>) {
         // Create new target with the real sender
         self.target = MenuTarget::new(sender.clone(), self.menu_ids.clone());
-        
+
         // Re-bind all menu items to the new target
         self.rebind_menu_items(&self.menu.clone());
     }
-    
+
     fn rebind_menu_items(&self, menu: &NSMenu) {
         unsafe {
             let item_count = menu.numberOfItems();
@@ -249,9 +249,9 @@ impl<T: PartialEq + Clone + 'static> MacMenu<T> {
                 if let Some(item) = menu.itemAtIndex(i) {
                     // Only rebind items that have actions (not separators)
                     if !item.action().is_none() {
-                        item.setTarget(Some(&self.target));
+                        item.setTarget(Some(&*self.target));
                     }
-                    
+
                     // Recursively rebind submenu items
                     if let Some(submenu) = item.submenu() {
                         self.rebind_menu_items(&submenu);

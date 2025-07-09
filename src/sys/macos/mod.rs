@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub use icon::MacIcon as IconSys;
 pub use trayicon::MacTrayIcon as TrayIconSys;
 
+#[allow(dead_code)]
 pub struct MenuSys<T>
 where
     T: PartialEq + Clone + 'static,
@@ -27,6 +28,7 @@ where
     trayicon::build_trayicon(builder)
 }
 
+#[allow(dead_code)]
 /// Build the menu from MenuBuilder
 pub fn build_menu<T>(builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where

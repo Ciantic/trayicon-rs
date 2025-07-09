@@ -6,8 +6,8 @@ edition = "2018"
 publish = false
 
 [dependencies]
-objc2 = "0.5"
-objc2-app-kit = { version = "0.2", features = [
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = [
     "NSStatusBar",
     "NSStatusItem",
     "NSMenu",
@@ -17,7 +17,7 @@ objc2-app-kit = { version = "0.2", features = [
     "NSApplication",
     "NSRunningApplication",
 ] }
-objc2-foundation = { version = "0.2", features = [
+objc2-foundation = { version = "0.3", features = [
     "NSData",
     "NSString",
     "NSThread",

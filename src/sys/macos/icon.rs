@@ -1,12 +1,12 @@
 use crate::{Error, IconBase};
-use objc2::rc::Id;
-use objc2::{msg_send, ClassType};
+use objc2::rc::Retained;
+use objc2::{msg_send, AnyThread};
 use objc2_app_kit::NSImage;
 use objc2_foundation::{NSData, NSSize};
 
 #[derive(Clone)]
 pub struct MacIcon {
-    pub(crate) ns_image: Id<NSImage>,
+    pub(crate) ns_image: Retained<NSImage>,
 }
 
 impl IconBase for MacIcon {

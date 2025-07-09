@@ -109,7 +109,5 @@ fn main() {
     });
 
     // macOS application main loop using NSApplication
-    unsafe {
-        app.run();
-    }
+    app.run();
 }

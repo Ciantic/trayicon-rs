@@ -2,7 +2,7 @@ use super::menu::{build_menu, MacMenu};
 use crate::{
     trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase, TrayIconBuilder,
 };
-use objc2::rc::Id;
+use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::msg_send;
 use objc2_app_kit::{NSStatusBar, NSStatusItem, NSVariableStatusItemLength};
@@ -12,7 +12,7 @@ pub struct MacTrayIcon<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    status_item: Id<NSStatusItem>,
+    status_item: Retained<NSStatusItem>,
     menu: Option<MacMenu<T>>,
     #[allow(dead_code)]
     sender: TrayIconSender<T>,
