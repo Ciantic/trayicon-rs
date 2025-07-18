@@ -1237,7 +1237,7 @@ checksum = "b9d12581f227e93f094d3af2ae690a574abb8a2b9b7a96e7cfe9647b2b617678"
 
 [[package]]
 name = "trayicon"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "objc2 0.6.1",
  "objc2-app-kit 0.3.1",
