@@ -5,6 +5,10 @@
 #[path = "./sys/windows/mod.rs"]
 mod sys;
 
+#[cfg(target_os = "macos")]
+#[path = "./sys/macos/mod.rs"]
+mod sys;
+
 mod icon;
 mod menubuilder;
 mod trayicon;

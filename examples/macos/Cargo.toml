@@ -1,0 +1,25 @@
+[package]
+name = "trayicon-macos-example"
+version = "0.0.1"
+authors = ["Bearice Ren"]
+edition = "2018"
+publish = false
+
+[dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = [
+    "NSStatusBar",
+    "NSStatusItem",
+    "NSMenu",
+    "NSMenuItem",
+    "NSImage",
+    "NSResponder",
+    "NSApplication",
+    "NSRunningApplication",
+] }
+objc2-foundation = { version = "0.3", features = [
+    "NSData",
+    "NSString",
+    "NSThread",
+] }
+trayicon = { path = "../../" }
