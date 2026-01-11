@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-use crate::{Error, MenuBuilder, TrayIconBuilder, TrayIconEvent};
+use crate::{Error, MenuBuilder, MenuItem, TrayIconBuilder, TrayIconEvent};
 
 mod dbus;
 mod kdeicon;
@@ -9,13 +9,25 @@ use dbus::*;
 pub use kdeicon::KdeIcon as IconSys;
 pub use kdetrayicon::KdeTrayIconImpl as TrayIconSys;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct MenuItemData<T: TrayIconEvent> {
+    pub id: i32,
+    pub label: String,
+    pub event_id: Option<T>,
+    pub is_separator: bool,
+    pub is_checkable: bool,
+    pub is_checked: bool,
+    pub is_disabled: bool,
+    pub children: Vec<MenuItemData<T>>,
+}
+
+#[derive(Clone, Debug)]
 pub struct MenuSys<T>
 where
     T: TrayIconEvent,
 {
-    #[allow(dead_code)]
-    ids: HashMap<usize, T>,
+    pub(crate) items: Vec<MenuItemData<T>>,
+    pub(crate) event_sender: Arc<Mutex<Option<std::sync::mpsc::Sender<(i32, T)>>>>,
 }
 
 impl<T> MenuSys<T>
@@ -23,10 +35,9 @@ where
     T: TrayIconEvent,
 {
     pub(crate) fn new() -> Result<MenuSys<T>, Error> {
-        let connection = get_dbus_connection();
-        register_dbus_menu_blocking(connection);
         Ok(MenuSys {
-            ids: HashMap::new(),
+            items: vec![],
+            event_sender: Arc::new(Mutex::new(None)),
         })
     }
 }
@@ -48,7 +59,29 @@ where
 
     // Try to get a popup menu
     if let Some(rhmenu) = &builder.menu {
-        menu = Some(rhmenu.build()?);
+        let built_menu = rhmenu.build()?;
+
+        // Set up event handling channel
+        let (event_tx, event_rx) = std::sync::mpsc::channel::<(i32, T)>();
+        let sender_clone = sender.clone();
+
+        // Store the sender in MenuSys
+        if let Ok(mut event_sender) = built_menu.event_sender.lock() {
+            *event_sender = Some(event_tx.clone());
+        }
+
+        // Spawn thread to handle menu events
+        std::thread::spawn(move || {
+            while let Ok((_menu_id, event)) = event_rx.recv() {
+                sender_clone.send(&event);
+            }
+        });
+
+        // Register the menu with DBus
+        let connection = get_dbus_connection();
+        register_dbus_menu_blocking(connection, built_menu.clone());
+
+        menu = Some(built_menu);
     }
 
     Ok(TrayIconSys::new(
@@ -74,11 +107,89 @@ where
 ///
 /// Having a j value as mutable reference it's capable of handling nested
 /// submenus
-fn build_menu_inner<T>(_j: &mut usize, _builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
+fn build_menu_inner<T>(j: &mut usize, builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
     T: TrayIconEvent,
 {
-    MenuSys::new()
+    let mut menu_sys = MenuSys::new()?;
+
+    for item in &builder.menu_items {
+        let menu_item_data = convert_menu_item(j, item)?;
+        menu_sys.items.push(menu_item_data);
+    }
+
+    Ok(menu_sys)
+}
+
+fn convert_menu_item<T>(j: &mut usize, item: &MenuItem<T>) -> Result<MenuItemData<T>, Error>
+where
+    T: TrayIconEvent,
+{
+    *j += 1;
+    let current_id = *j as i32;
+
+    match item {
+        MenuItem::Separator => Ok(MenuItemData {
+            id: current_id,
+            label: String::new(),
+            event_id: None,
+            is_separator: true,
+            is_checkable: false,
+            is_checked: false,
+            is_disabled: false,
+            children: vec![],
+        }),
+        MenuItem::Item {
+            id, name, disabled, ..
+        } => Ok(MenuItemData {
+            id: current_id,
+            label: name.clone(),
+            event_id: Some(id.clone()),
+            is_separator: false,
+            is_checkable: false,
+            is_checked: false,
+            is_disabled: *disabled,
+            children: vec![],
+        }),
+        MenuItem::Checkable {
+            id,
+            name,
+            is_checked,
+            disabled,
+            ..
+        } => Ok(MenuItemData {
+            id: current_id,
+            label: name.clone(),
+            event_id: Some(id.clone()),
+            is_separator: false,
+            is_checkable: true,
+            is_checked: *is_checked,
+            is_disabled: *disabled,
+            children: vec![],
+        }),
+        MenuItem::Submenu {
+            name,
+            children,
+            disabled,
+            ..
+        } => {
+            let mut child_items = vec![];
+            for child in &children.menu_items {
+                let child_data = convert_menu_item(j, child)?;
+                child_items.push(child_data);
+            }
+            Ok(MenuItemData {
+                id: current_id,
+                label: name.clone(),
+                event_id: None,
+                is_separator: false,
+                is_checkable: false,
+                is_checked: false,
+                is_disabled: *disabled,
+                children: child_items,
+            })
+        }
+    }
 }
 
 #[cfg(test)]
@@ -128,7 +239,17 @@ pub(crate) mod tests {
             .item("Item 1", Events::Item1);
 
         if let Ok(menusys) = build_menu(&builder) {
-            assert_eq!(menusys.ids.len(), 9);
+            // Count items recursively
+            fn count_items<T: TrayIconEvent>(items: &[MenuItemData<T>]) -> usize {
+                let mut count = items.len();
+                for item in items {
+                    count += count_items(&item.children);
+                }
+                count
+            }
+
+            let total_items = count_items(&menusys.items);
+            assert_eq!(total_items, 11);
         } else {
             panic!()
         }

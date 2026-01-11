@@ -14,16 +14,110 @@ pub struct Layout {
     pub children: Vec<OwnedValue>,
 }
 
-pub struct DbusMenu();
+pub struct DbusMenu<T>
+where
+    T: crate::TrayIconEvent,
+{
+    menu_sys: super::super::MenuSys<T>,
+}
 
-impl DbusMenu {
-    pub fn new() -> Self {
-        DbusMenu()
+impl<T> DbusMenu<T>
+where
+    T: crate::TrayIconEvent,
+{
+    pub fn new(menu_sys: super::super::MenuSys<T>) -> Self {
+        DbusMenu { menu_sys }
+    }
+
+    fn build_layout_from_items(&self, items: &[super::super::MenuItemData<T>]) -> Vec<OwnedValue> {
+        let mut children = vec![];
+
+        for item in items {
+            if item.is_separator {
+                let mut properties = HashMap::new();
+                properties.insert(
+                    "type".to_string(),
+                    OwnedValue::try_from(Value::new("separator")).unwrap(),
+                );
+
+                let layout = Layout {
+                    id: item.id,
+                    properties,
+                    children: vec![],
+                };
+                children.push(OwnedValue::try_from(layout).unwrap());
+            } else {
+                let mut properties = HashMap::new();
+                properties.insert(
+                    "label".to_string(),
+                    OwnedValue::try_from(Value::new(item.label.as_str())).unwrap(),
+                );
+
+                if item.is_disabled {
+                    properties.insert(
+                        "enabled".to_string(),
+                        OwnedValue::try_from(Value::new(false)).unwrap(),
+                    );
+                }
+
+                if item.is_checkable {
+                    properties.insert(
+                        "toggle-type".to_string(),
+                        OwnedValue::try_from(Value::new("checkbox")).unwrap(),
+                    );
+                    properties.insert(
+                        "toggle-state".to_string(),
+                        OwnedValue::try_from(Value::new(if item.is_checked { 1i32 } else { 0i32 }))
+                            .unwrap(),
+                    );
+                }
+
+                let child_layouts = if !item.children.is_empty() {
+                    properties.insert(
+                        "children-display".to_string(),
+                        OwnedValue::try_from(Value::new("submenu")).unwrap(),
+                    );
+                    self.build_layout_from_items(&item.children)
+                } else {
+                    vec![]
+                };
+
+                let layout = Layout {
+                    id: item.id,
+                    properties,
+                    children: child_layouts,
+                };
+                children.push(OwnedValue::try_from(layout).unwrap());
+            }
+        }
+
+        children
+    }
+
+    fn find_item_by_id<'a>(
+        &self,
+        id: i32,
+        items: &'a [super::super::MenuItemData<T>],
+    ) -> Option<&'a super::super::MenuItemData<T>> {
+        for item in items {
+            if item.id == id {
+                return Some(item);
+            }
+            if !item.children.is_empty() {
+                if let Some(found) = self.find_item_by_id(id, &item.children) {
+                    return Some(found);
+                }
+            }
+        }
+        None
     }
 }
 
 #[zbus::interface(name = "com.canonical.dbusmenu")]
-impl DbusMenu {
+impl<T> DbusMenu<T>
+where
+    T: crate::TrayIconEvent,
+{
     // methods
     async fn get_layout(
         &self,
@@ -32,160 +126,37 @@ impl DbusMenu {
         _property_names: Vec<String>,
     ) -> zbus::fdo::Result<(u32, Layout)> {
         println!("get_layout called for parent_id {}", parent_id);
+
         if parent_id == 0 {
-            // Checkable item example:
-            let mut checked_item_properties = HashMap::new();
-            checked_item_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Checkable item (checked)")).unwrap(),
-            );
-            checked_item_properties.insert(
-                "toggle-type".to_string(),
-                OwnedValue::try_from(Value::new("checkbox")).unwrap(),
-            );
-            checked_item_properties.insert(
-                "toggle-state".to_string(),
-                OwnedValue::try_from(Value::new(1i32)).unwrap(),
-            );
-
-            let checked_child = Layout {
-                id: 1,
-                properties: checked_item_properties,
-                children: vec![],
-            };
-
-            let mut unchecked_item_properties = HashMap::new();
-            unchecked_item_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Checkable item (unchecked)")).unwrap(),
-            );
-            unchecked_item_properties.insert(
-                "toggle-type".to_string(),
-                OwnedValue::try_from(Value::new("checkbox")).unwrap(),
-            );
-            unchecked_item_properties.insert(
-                "toggle-state".to_string(),
-                OwnedValue::try_from(Value::new(0i32)).unwrap(),
-            );
-
-            let unchecked_child = Layout {
-                id: 2,
-                properties: unchecked_item_properties,
-                children: vec![],
-            };
-
-            // Submenu example:
-            let mut submenu_option1_properties = HashMap::new();
-            submenu_option1_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Option 1")).unwrap(),
-            );
-
-            let submenu_option1 = Layout {
-                id: 10,
-                properties: submenu_option1_properties,
-                children: vec![],
-            };
-
-            let mut submenu_option2_properties = HashMap::new();
-            submenu_option2_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Option 2")).unwrap(),
-            );
-
-            let submenu_option2 = Layout {
-                id: 11,
-                properties: submenu_option2_properties,
-                children: vec![],
-            };
-
-            let mut submenu_properties = HashMap::new();
-            submenu_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Submenu")).unwrap(),
-            );
-            submenu_properties.insert(
-                "children-display".to_string(),
-                OwnedValue::try_from(Value::new("submenu")).unwrap(),
-            );
-
-            let submenu = Layout {
-                id: 4,
-                properties: submenu_properties,
-                children: vec![
-                    OwnedValue::try_from(submenu_option1).unwrap(),
-                    OwnedValue::try_from(submenu_option2).unwrap(),
-                ],
-            };
-
-            // Regular item example:
-
-            let mut quit_properties = HashMap::new();
-            quit_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Quit")).unwrap(),
-            );
-
-            let quit_child = Layout {
-                id: 3,
-                properties: quit_properties,
-                children: vec![],
-            };
+            // Root menu
+            let children = self.build_layout_from_items(&self.menu_sys.items);
 
             Ok((
                 0,
                 Layout {
                     id: parent_id,
                     properties: HashMap::new(),
-                    children: vec![
-                        OwnedValue::try_from(checked_child).unwrap(),
-                        OwnedValue::try_from(unchecked_child).unwrap(),
-                        OwnedValue::try_from(submenu).unwrap(),
-                        OwnedValue::try_from(quit_child).unwrap(),
-                    ],
-                },
-            ))
-        } else if parent_id == 4 {
-            // Submenu layout
-            let mut submenu_option1_properties = HashMap::new();
-            submenu_option1_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Option 1")).unwrap(),
-            );
-
-            let submenu_option1 = Layout {
-                id: 10,
-                properties: submenu_option1_properties,
-                children: vec![],
-            };
-
-            let mut submenu_option2_properties = HashMap::new();
-            submenu_option2_properties.insert(
-                "label".to_string(),
-                OwnedValue::try_from(Value::new("Option 2")).unwrap(),
-            );
-
-            let submenu_option2 = Layout {
-                id: 11,
-                properties: submenu_option2_properties,
-                children: vec![],
-            };
-
-            Ok((
-                0,
-                Layout {
-                    id: parent_id,
-                    properties: HashMap::new(),
-                    children: vec![
-                        OwnedValue::try_from(submenu_option1).unwrap(),
-                        OwnedValue::try_from(submenu_option2).unwrap(),
-                    ],
+                    children,
                 },
             ))
         } else {
-            Err(zbus::fdo::Error::InvalidArgs(
-                "parentId not found".to_string(),
-            ))
+            // Submenu
+            if let Some(item) = self.find_item_by_id(parent_id, &self.menu_sys.items) {
+                let children = self.build_layout_from_items(&item.children);
+
+                Ok((
+                    0,
+                    Layout {
+                        id: parent_id,
+                        properties: HashMap::new(),
+                        children,
+                    },
+                ))
+            } else {
+                Err(zbus::fdo::Error::InvalidArgs(
+                    "parentId not found".to_string(),
+                ))
+            }
         }
     }
 
@@ -207,18 +178,29 @@ impl DbusMenu {
     async fn event(
         &self,
         #[zbus(connection)] _conn: &Connection,
-        _id: i32,
-        _event_id: String,
+        id: i32,
+        event_id: String,
         _data: OwnedValue,
         _timestamp: u32,
     ) -> zbus::fdo::Result<()> {
         println!(
-            "Event received for id {} {} {} {}",
-            _id,
-            _event_id,
-            _timestamp,
-            _data.to_string()
+            "Event received for id {} event_id {} timestamp {}",
+            id, event_id, _timestamp
         );
+
+        // Handle clicked events
+        if event_id == "clicked" {
+            if let Some(item) = self.find_item_by_id(id, &self.menu_sys.items) {
+                if let Some(event) = &item.event_id {
+                    if let Ok(sender) = self.menu_sys.event_sender.lock() {
+                        if let Some(tx) = sender.as_ref() {
+                            let _ = tx.send((id, event.clone()));
+                        }
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 

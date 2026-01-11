@@ -20,9 +20,12 @@ pub fn get_dbus_connection() -> &'static zbus::Connection {
     &DBUS_CONNECTION
 }
 
-pub fn register_dbus_menu_blocking(connection: &zbus::Connection) {
+pub fn register_dbus_menu_blocking<T>(connection: &zbus::Connection, menu_sys: super::MenuSys<T>)
+where
+    T: crate::TrayIconEvent,
+{
     return futures::executor::block_on(async {
-        let dbus_menu = DbusMenu::new();
+        let dbus_menu = DbusMenu::new(menu_sys);
         let _ = connection
             .object_server()
             .at("/MenuBar", dbus_menu)
