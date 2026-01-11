@@ -40,7 +40,11 @@ pub fn register_notifier_item_watcher_blocking(
     icon_width: u32,
     icon_height: u32,
     tooltip: String,
-) -> (StatusNotifierWatcherProxy<'static>, Arc<Mutex<IconData>>) {
+) -> (
+    StatusNotifierWatcherProxy<'static>,
+    Arc<Mutex<IconData>>,
+    Arc<Mutex<String>>,
+) {
     // Create the StatusNotifierWatcher proxy and register our item
     return futures::executor::block_on(async {
         let unique_name = format!("org.kde.StatusNotifierItem-{}-1", std::process::id()); // TODO: make unique
@@ -53,11 +57,13 @@ pub fn register_notifier_item_watcher_blocking(
             height: icon_height,
         }));
 
+        let tooltip_data = Arc::new(Mutex::new(tooltip));
+
         let status_notifier_item = StatusNotifierItemImpl {
             id: unique_name.clone(),
             channel_sender,
             icon_data: icon_data.clone(),
-            tooltip,
+            tooltip: tooltip_data.clone(),
         };
         let _ = connection
             .object_server()
@@ -100,6 +106,6 @@ pub fn register_notifier_item_watcher_blocking(
             }
         }
 
-        (proxy, icon_data)
+        (proxy, icon_data, tooltip_data)
     });
 }

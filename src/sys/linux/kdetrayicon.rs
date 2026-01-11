@@ -22,6 +22,7 @@ where
     menu: Option<MenuSys<T>>,
     event_sender: Arc<Mutex<Option<std::sync::mpsc::Sender<(i32, T)>>>>,
     icon_data: Arc<Mutex<IconData>>,
+    tooltip_data: Arc<Mutex<String>>,
     // notify_icon: WinNotifyIcon,
     // on_click: Option<T>,
     // on_double_click: Option<T>,
@@ -61,7 +62,7 @@ where
             (None, 0, 0)
         };
 
-        let (_, icon_data_ref) = register_notifier_item_watcher_blocking(
+        let (_, icon_data_ref, tooltip_data_ref) = register_notifier_item_watcher_blocking(
             connection,
             sender.clone(),
             icon_buffer,
@@ -100,6 +101,7 @@ where
             menu,
             event_sender,
             icon_data: icon_data_ref,
+            tooltip_data: tooltip_data_ref,
             // notify_icon,
             // on_click,
             // on_double_click,
@@ -198,8 +200,25 @@ where
         Ok(())
     }
 
-    fn set_tooltip(&mut self, _tooltip: &str) -> Result<(), Error> {
-        // TODO: ...
+    fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error> {
+        // Update the tooltip data
+        if let Ok(mut tooltip_data) = self.tooltip_data.lock() {
+            *tooltip_data = tooltip.to_string();
+        }
+
+        // Emit the NewToolTip signal to notify the system tray
+        let connection = get_dbus_connection();
+        futures::executor::block_on(async {
+            if let Ok(obj) = connection
+                .object_server()
+                .interface::<_, StatusNotifierItemImpl>("/StatusNotifierItem")
+                .await
+            {
+                let emitter = obj.signal_emitter();
+                let _ = StatusNotifierItemImpl::new_tool_tip(&emitter).await;
+            }
+        });
+
         Ok(())
     }
 

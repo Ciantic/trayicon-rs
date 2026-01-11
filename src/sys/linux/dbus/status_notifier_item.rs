@@ -29,7 +29,7 @@ pub struct StatusNotifierItemImpl {
     pub id: String,
     pub channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
     pub icon_data: Arc<Mutex<IconData>>,
-    pub tooltip: String,
+    pub tooltip: Arc<Mutex<String>>,
 }
 
 #[interface(name = "org.kde.StatusNotifierItem")]
@@ -219,7 +219,8 @@ impl StatusNotifierItemImpl {
     pub fn tool_tip(
         &self,
     ) -> zbus::fdo::Result<(String, Vec<(i32, i32, Vec<u8>)>, String, String)> {
-        Ok((String::new(), vec![], self.tooltip.clone(), String::new()))
+        let tooltip = self.tooltip.lock().unwrap().clone();
+        Ok((String::new(), vec![], tooltip, String::new()))
     }
 
     /// WindowId property
