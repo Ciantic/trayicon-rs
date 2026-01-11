@@ -1,15 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{
-    sys::status_notifier_watcher::StatusNotifierWatcherProxy, Error, MenuBuilder, MenuItem,
-    TrayIconBuilder,
-};
-mod canonical_dbus_menu;
+use crate::{Error, MenuBuilder, MenuItem, TrayIconBuilder};
+
+mod dbus;
 mod kdeicon;
 mod kdetrayicon;
-mod status_notifier_item;
-mod status_notifier_watcher;
-pub use canonical_dbus_menu::DbusMenu;
+use dbus::*;
 pub use kdeicon::KdeIcon as IconSys;
 pub use kdetrayicon::KdeTrayIconImpl as TrayIconSys;
 
