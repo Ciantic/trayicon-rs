@@ -17,11 +17,11 @@ pub type WinTrayIcon<T> = WindowBox<T>;
 #[derive(Debug)]
 pub struct WindowBox<T>(*mut WinTrayIconImpl<T>)
 where
-    T: PartialEq + Clone + 'static;
+    T: PartialEq + Clone + 'static + Send + Sync;
 
 impl<T> Drop for WindowBox<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     fn drop(&mut self) {
         unsafe {
@@ -35,7 +35,7 @@ where
 
 impl<T> Deref for WindowBox<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     type Target = WinTrayIconImpl<T>;
 
@@ -46,7 +46,7 @@ where
 
 impl<T> DerefMut for WindowBox<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *(self.0) }
@@ -59,7 +59,7 @@ where
 #[derive(Debug)]
 pub struct WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     hwnd: HWND,
     sender: TrayIconSender<T>,
@@ -71,12 +71,12 @@ where
     msg_taskbarcreated: Option<UINT>,
 }
 
-unsafe impl<T> Send for WinTrayIconImpl<T> where T: PartialEq + Clone {}
-unsafe impl<T> Sync for WinTrayIconImpl<T> where T: PartialEq + Clone {}
+unsafe impl<T> Send for WinTrayIconImpl<T> where T: PartialEq + Clone + Send + Sync {}
+unsafe impl<T> Sync for WinTrayIconImpl<T> where T: PartialEq + Clone + Send + Sync {}
 
 impl<T> WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     #[allow(clippy::new_ret_no_self)]
     #[allow(clippy::too_many_arguments)]
@@ -268,7 +268,7 @@ where
 
 impl<T> TrayIconBase<T> for WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     /// Set the tooltip
     fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error> {
@@ -309,7 +309,7 @@ where
 
 impl<T> Drop for WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     fn drop(&mut self) {
         self.notify_icon.remove();

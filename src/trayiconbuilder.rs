@@ -31,7 +31,7 @@ impl std::error::Error for Error {}
 #[derive(Debug, Clone)]
 pub struct TrayIconBuilder<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     pub(crate) icon: Result<Icon, Error>,
     pub(crate) menu: Option<MenuBuilder<T>>,
@@ -44,7 +44,7 @@ where
 
 impl<T> TrayIconBuilder<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     #[allow(clippy::new_without_default)]
     pub fn new() -> TrayIconBuilder<T> {
@@ -67,7 +67,7 @@ where
         f(self)
     }
 
-    pub fn sender(mut self, cb: impl Fn(&T) + 'static) -> Self {
+    pub fn sender(mut self, cb: impl Fn(&T) + Send + Sync + 'static) -> Self {
         self.sender = Some(TrayIconSender::new(cb));
         self
     }

@@ -2,6 +2,7 @@ mod canonical_dbus_menu;
 mod status_notifier_item;
 mod status_notifier_watcher;
 pub use canonical_dbus_menu::*;
+pub use status_notifier_item::StatusNotifierEvent;
 pub use status_notifier_item::StatusNotifierItemImpl;
 pub use status_notifier_watcher::StatusNotifierWatcherProxy;
 use std::sync::LazyLock;
@@ -32,6 +33,7 @@ pub fn register_dbus_menu_blocking(connection: &zbus::Connection) {
 
 pub fn register_notifier_item_watcher_blocking(
     connection: &zbus::Connection,
+    channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
 ) -> StatusNotifierWatcherProxy<'static> {
     // Create the StatusNotifierWatcher proxy and register our item
     return futures::executor::block_on(async {
@@ -40,6 +42,7 @@ pub fn register_notifier_item_watcher_blocking(
         let _ = connection.request_name(owned_name).await;
         let status_notifier_item = StatusNotifierItemImpl {
             id: unique_name.clone(),
+            channel_sender,
         };
         let _ = connection
             .object_server()

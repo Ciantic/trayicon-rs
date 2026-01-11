@@ -1,9 +1,9 @@
 use crate::{trayiconsender::TrayIconSender, Error, MenuBuilder, MenuItem};
 use objc2::rc::{Allocated, Retained};
 use objc2::runtime::Sel;
-use objc2::{class, msg_send, define_class, DeclaredClass, MainThreadOnly};
+use objc2::{class, define_class, msg_send, DeclaredClass, MainThreadOnly};
 use objc2_app_kit::{NSMenu, NSMenuItem};
-use objc2_foundation::{MainThreadMarker, NSString, NSObject};
+use objc2_foundation::{MainThreadMarker, NSObject, NSString};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -36,7 +36,7 @@ define_class!(
 impl MenuTarget {
     fn new<T: PartialEq + Clone + 'static>(
         sender: TrayIconSender<T>,
-        menu_ids: Arc<Mutex<HashMap<isize, T>>>
+        menu_ids: Arc<Mutex<HashMap<isize, T>>>,
     ) -> Retained<Self> {
         let callback: Box<dyn Fn(isize)> = Box::new(move |tag| {
             let menu_ids = menu_ids.lock().unwrap();
@@ -65,7 +65,7 @@ impl Drop for MenuTarget {
 
 pub struct MacMenu<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     pub(crate) ids: HashMap<usize, T>,
     pub(crate) menu: Retained<NSMenu>,
@@ -74,9 +74,12 @@ where
 }
 
 /// Build the menu from MenuBuilder
-pub fn build_menu<T>(builder: &MenuBuilder<T>, sender: &TrayIconSender<T>) -> Result<MacMenu<T>, Error>
+pub fn build_menu<T>(
+    builder: &MenuBuilder<T>,
+    sender: &TrayIconSender<T>,
+) -> Result<MacMenu<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     let mut j = 0;
     let menu_ids = Arc::new(Mutex::new(HashMap::new()));
@@ -96,10 +99,10 @@ fn build_menu_inner<T>(
     j: &mut usize,
     builder: &MenuBuilder<T>,
     target: &Retained<MenuTarget>,
-    menu_ids: &Arc<Mutex<HashMap<isize, T>>>
+    menu_ids: &Arc<Mutex<HashMap<isize, T>>>,
 ) -> Result<MacMenu<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     let mut map: HashMap<usize, T> = HashMap::new();
     let mtm = unsafe { MainThreadMarker::new_unchecked() };
@@ -228,11 +231,11 @@ where
         ids: map,
         menu,
         target: target.clone(),
-        menu_ids: menu_ids.clone()
+        menu_ids: menu_ids.clone(),
     })
 }
 
-impl<T: PartialEq + Clone + 'static> MacMenu<T> {
+impl<T: PartialEq + Clone + 'static + Send + Sync> MacMenu<T> {
     /// Update the menu target with a new sender
     pub fn update_sender(&mut self, sender: &TrayIconSender<T>) {
         // Create new target with the real sender

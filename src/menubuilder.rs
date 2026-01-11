@@ -3,7 +3,7 @@ use crate::{Error, Icon};
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuItem<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     Separator,
     Item {
@@ -31,7 +31,7 @@ where
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct MenuBuilder<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     pub(crate) menu_items: Vec<MenuItem<T>>,
 }
@@ -43,7 +43,7 @@ where
 /// conditionally some items.
 impl<T> MenuBuilder<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     pub fn new() -> MenuBuilder<T> {
         MenuBuilder { menu_items: vec![] }

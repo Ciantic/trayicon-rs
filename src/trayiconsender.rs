@@ -1,6 +1,6 @@
 /// Tray Icon event sender
 #[derive(Clone)]
-pub(crate) struct TrayIconSender<T>(std::sync::Arc<dyn Fn(&T)>);
+pub(crate) struct TrayIconSender<T>(std::sync::Arc<dyn Fn(&T) + Send + Sync>);
 
 impl<T> std::fmt::Debug for TrayIconSender<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -11,7 +11,7 @@ impl<T> std::fmt::Debug for TrayIconSender<T> {
 }
 
 impl<T> TrayIconSender<T> {
-    pub(crate) fn new(f: impl Fn(&T) + 'static) -> Self {
+    pub(crate) fn new(f: impl Fn(&T) + Send + Sync + 'static) -> Self {
         TrayIconSender(std::sync::Arc::new(f))
     }
 }

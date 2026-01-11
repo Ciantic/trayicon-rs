@@ -161,6 +161,7 @@ impl ApplicationHandler<UserEvents> for MyApplication {
                 self.tray_icon.set_tooltip("Menu changed!").unwrap();
             }
             UserEvents::LeftClickTrayIcon => {
+                println!("Left click tray icon - showing menu");
                 self.tray_icon.show_menu().unwrap();
             }
             // Events::DoubleClickTrayIcon => todo!(),

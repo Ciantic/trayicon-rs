@@ -2,7 +2,7 @@ use crate::{Error, Icon, MenuBuilder, TrayIconBase, TrayIconBuilder};
 
 pub struct TrayIcon<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     sys: crate::TrayIconSys<T>,
     builder: TrayIconBuilder<T>,
@@ -10,7 +10,7 @@ where
 
 impl<T> TrayIcon<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     pub(crate) fn new(sys: crate::TrayIconSys<T>, builder: TrayIconBuilder<T>) -> TrayIcon<T> {
         TrayIcon { builder, sys }
@@ -92,6 +92,6 @@ where
     }
 }
 
-unsafe impl<T> Sync for TrayIcon<T> where T: PartialEq + Clone + 'static {}
+unsafe impl<T> Sync for TrayIcon<T> where T: PartialEq + Clone + 'static + Send + Sync {}
 
-unsafe impl<T> Send for TrayIcon<T> where T: PartialEq + Clone + 'static {}
+unsafe impl<T> Send for TrayIcon<T> where T: PartialEq + Clone + 'static + Send + Sync {}

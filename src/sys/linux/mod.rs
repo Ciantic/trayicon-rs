@@ -12,7 +12,7 @@ pub use kdetrayicon::KdeTrayIconImpl as TrayIconSys;
 #[derive(Debug)]
 pub struct MenuSys<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     connection: &'static zbus::Connection,
     ids: HashMap<usize, T>,
@@ -20,7 +20,7 @@ where
 
 impl<T> MenuSys<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     pub(crate) fn new() -> Result<MenuSys<T>, Error> {
         let connection = get_dbus_connection();
@@ -35,7 +35,7 @@ where
 /// Build the tray icon
 pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<TrayIconSys<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     let mut menu: Option<MenuSys<T>> = None;
     let tooltip = &builder.tooltip;
@@ -64,7 +64,7 @@ where
 /// Build the menu from Windows HMENU
 pub fn build_menu<T>(builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     let mut j = 0;
     build_menu_inner(&mut j, builder)
@@ -76,7 +76,7 @@ where
 /// submenus
 fn build_menu_inner<T>(j: &mut usize, builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     MenuSys::new()
 }

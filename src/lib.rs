@@ -47,7 +47,7 @@ pub(crate) use crate::sys::{
 /// TrayIconSys must implement this
 pub(crate) trait TrayIconBase<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;

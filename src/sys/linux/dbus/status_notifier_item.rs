@@ -1,41 +1,67 @@
 use zbus::interface;
 use zbus::object_server::SignalEmitter;
 
+pub enum StatusNotifierEvent {
+    /// Activated at the given coordinates (x, y), equivalent of left-click
+    Activate(i32, i32),
+    /// Context menu requested at the given coordinates (x, y)
+    ContextMenu(i32, i32),
+    /// XDG activation token provided
+    ProvideXdgActivationToken(String),
+    /// Scrolled with the given delta and orientation
+    Scroll(i32, String),
+    /// Secondary activation (e.g., middle-click) at the given coordinates (x, y)
+    SecondaryActivate(i32, i32),
+}
+
 // Minimal in-process implementation of `org.kde.StatusNotifierItem` to register
 #[derive(Debug)]
 pub struct StatusNotifierItemImpl {
     pub id: String,
+    pub channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
 }
 
 #[interface(name = "org.kde.StatusNotifierItem")]
 impl StatusNotifierItemImpl {
     /// Activate method
-    pub fn activate(&self, _x: i32, _y: i32) -> zbus::fdo::Result<()> {
-        println!("Activate called, {}, {}", _x, _y);
+    pub fn activate(&self, x: i32, y: i32) -> zbus::fdo::Result<()> {
+        let _ = self
+            .channel_sender
+            .send(StatusNotifierEvent::Activate(x, y));
         Ok(())
     }
 
     /// ContextMenu method
-    pub fn context_menu(&self, _x: i32, _y: i32) -> zbus::fdo::Result<()> {
-        println!("ContextMenu called");
+    pub fn context_menu(&self, x: i32, y: i32) -> zbus::fdo::Result<()> {
+        let _ = self
+            .channel_sender
+            .send(StatusNotifierEvent::ContextMenu(x, y));
         Ok(())
     }
 
     /// ProvideXdgActivationToken method
-    pub fn provide_xdg_activation_token(&self, _token: &str) -> zbus::fdo::Result<()> {
-        println!("ProvideXdgActivationToken called {}", _token);
+    pub fn provide_xdg_activation_token(&self, token: &str) -> zbus::fdo::Result<()> {
+        let _ = self
+            .channel_sender
+            .send(StatusNotifierEvent::ProvideXdgActivationToken(
+                token.to_string(),
+            ));
         Ok(())
     }
 
     /// Scroll method
-    pub fn scroll(&self, _delta: i32, _orientation: &str) -> zbus::fdo::Result<()> {
-        println!("Scroll called");
+    pub fn scroll(&self, delta: i32, orientation: &str) -> zbus::fdo::Result<()> {
+        let _ = self
+            .channel_sender
+            .send(StatusNotifierEvent::Scroll(delta, orientation.to_string()));
         Ok(())
     }
 
     /// SecondaryActivate method
-    pub fn secondary_activate(&self, _x: i32, _y: i32) -> zbus::fdo::Result<()> {
-        println!("SecondaryActivate called");
+    pub fn secondary_activate(&self, x: i32, y: i32) -> zbus::fdo::Result<()> {
+        let _ = self
+            .channel_sender
+            .send(StatusNotifierEvent::SecondaryActivate(x, y));
         Ok(())
     }
 

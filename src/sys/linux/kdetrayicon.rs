@@ -4,7 +4,8 @@ use zbus::names::OwnedWellKnownName;
 use super::MenuSys;
 use crate::{
     sys::dbus::{
-        get_dbus_connection, register_notifier_item_watcher_blocking, StatusNotifierWatcherProxy,
+        get_dbus_connection, register_notifier_item_watcher_blocking, StatusNotifierEvent,
+        StatusNotifierWatcherProxy,
     },
     trayiconsender::TrayIconSender,
     Error, TrayIconBase,
@@ -13,28 +14,28 @@ use crate::{
 #[derive(Debug)]
 pub struct KdeTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     connection: &'static zbus::Connection,
     // status_notifier_item: StatusNotifierItemImpl,
     status_notifier_proxy: Box<StatusNotifierWatcherProxy<'static>>,
-    sender: TrayIconSender<T>,
+    // sender: TrayIconSender<T>,
     menu: Option<MenuSys<T>>,
     // notify_icon: WinNotifyIcon,
-    on_click: Option<T>,
-    on_double_click: Option<T>,
-    on_right_click: Option<T>,
+    // on_click: Option<T>,
+    // on_double_click: Option<T>,
+    // on_right_click: Option<T>,
     // msg_taskbarcreated: Option<UINT>,
 }
 
 impl<T> KdeTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     #[allow(clippy::new_ret_no_self)]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        sender: TrayIconSender<T>,
+        tray_icon_sender: TrayIconSender<T>,
         menu: Option<MenuSys<T>>,
         // notify_icon: WinNotifyIcon,
         on_click: Option<T>,
@@ -45,25 +46,40 @@ where
         T: PartialEq + Clone + 'static,
     {
         let connection = get_dbus_connection();
-        let status_notifier_proxy = register_notifier_item_watcher_blocking(connection);
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let status_notifier_proxy =
+            register_notifier_item_watcher_blocking(connection, sender.clone());
+        std::thread::spawn(move || {
+            while let Ok(event) = receiver.recv() {
+                match event {
+                    // Handle events here, e.g., map to tray icon actions
+                    StatusNotifierEvent::Activate(x, y) => {
+                        if let Some(on_click) = &on_click {
+                            tray_icon_sender.send(on_click);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        });
 
         Ok(KdeTrayIconImpl {
             connection,
             status_notifier_proxy: Box::new(status_notifier_proxy),
             // status_notifier_item,
-            sender,
+            // sender,
             menu,
             // notify_icon,
-            on_click,
-            on_double_click,
-            on_right_click,
+            // on_click,
+            // on_double_click,
+            // on_right_click,
         })
     }
 }
 
 impl<T> TrayIconBase<T> for KdeTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     fn set_icon(&mut self, KdeTrayIconImpl: &crate::Icon) -> Result<(), Error> {
         // TODO: ...

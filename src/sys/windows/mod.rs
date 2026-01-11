@@ -18,7 +18,7 @@ pub use wintrayicon::WinTrayIcon as TrayIconSys;
 #[derive(Debug)]
 pub struct MenuSys<T>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     ids: HashMap<usize, T>,
     menu: WinHMenu,
@@ -27,7 +27,7 @@ where
 /// Build the tray icon
 pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<TrayIconSys<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     let mut menu: Option<MenuSys<T>> = None;
     let tooltip = &builder.tooltip;
@@ -56,7 +56,7 @@ where
 /// Build the menu from Windows HMENU
 pub fn build_menu<T>(builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     let mut j = 0;
     build_menu_inner(&mut j, builder)
@@ -68,7 +68,7 @@ where
 /// submenus
 fn build_menu_inner<T>(j: &mut usize, builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
-    T: PartialEq + Clone + 'static,
+    T: PartialEq + Clone + 'static + Send + Sync,
 {
     let mut hmenu = WinHMenu::new()?;
     let mut map: HashMap<usize, T> = HashMap::new();
