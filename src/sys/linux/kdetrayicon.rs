@@ -17,7 +17,7 @@ where
     // connection: &'static zbus::Connection,
     // status_notifier_item: StatusNotifierItemImpl,
     // status_notifier_proxy: Box<StatusNotifierWatcherProxy<'static>>,
-    sender: TrayIconSender<T>,
+    // sender: TrayIconSender<T>,
     #[allow(dead_code)]
     menu: Option<MenuSys<T>>,
     event_sender: Arc<Mutex<Option<std::sync::mpsc::Sender<(i32, T)>>>>,
@@ -96,7 +96,7 @@ where
             // connection,
             // status_notifier_proxy: Box::new(status_notifier_proxy),
             // status_notifier_item,
-            sender: tray_icon_sender,
+            // sender: tray_icon_sender,
             menu,
             event_sender,
             icon_data: icon_data_ref,
