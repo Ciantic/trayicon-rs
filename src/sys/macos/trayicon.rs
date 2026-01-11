@@ -1,6 +1,7 @@
 use super::menu::{build_menu, MacMenu};
 use crate::{
     trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase, TrayIconBuilder,
+    TrayIconEvent,
 };
 use objc2::msg_send;
 use objc2::rc::Retained;
@@ -10,7 +11,7 @@ use objc2_foundation::NSString;
 
 pub struct MacTrayIcon<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     status_item: Retained<NSStatusItem>,
     menu: Option<MacMenu<T>>,
@@ -26,7 +27,7 @@ where
 
 impl<T> TrayIconBase<T> for MacTrayIcon<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error> {
         unsafe {
@@ -73,7 +74,7 @@ where
 
 impl<T> Drop for MacTrayIcon<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     fn drop(&mut self) {
         unsafe {
@@ -83,13 +84,13 @@ where
     }
 }
 
-unsafe impl<T> Send for MacTrayIcon<T> where T: PartialEq + Clone + 'static + Send + Sync {}
-unsafe impl<T> Sync for MacTrayIcon<T> where T: PartialEq + Clone + 'static + Send + Sync {}
+unsafe impl<T> Send for MacTrayIcon<T> where T: TrayIconEvent {}
+unsafe impl<T> Sync for MacTrayIcon<T> where T: TrayIconEvent {}
 
 /// Build the tray icon
 pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<MacTrayIcon<T>, Error>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     let icon = builder.icon.as_ref()?;
     let tooltip = builder.tooltip.as_deref().unwrap_or("");

@@ -8,13 +8,13 @@ use crate::{
         StatusNotifierWatcherProxy,
     },
     trayiconsender::TrayIconSender,
-    Error, TrayIconBase,
+    Error, TrayIconBase, TrayIconEvent,
 };
 
 #[derive(Debug)]
 pub struct KdeTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     connection: &'static zbus::Connection,
     // status_notifier_item: StatusNotifierItemImpl,
@@ -30,7 +30,7 @@ where
 
 impl<T> KdeTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     #[allow(clippy::new_ret_no_self)]
     #[allow(clippy::too_many_arguments)]
@@ -79,7 +79,7 @@ where
 
 impl<T> TrayIconBase<T> for KdeTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     fn set_icon(&mut self, KdeTrayIconImpl: &crate::Icon) -> Result<(), Error> {
         // TODO: ...

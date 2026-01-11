@@ -1,4 +1,4 @@
-use crate::{trayiconsender::TrayIconSender, Icon, MenuBuilder, TrayIcon};
+use crate::{trayiconsender::TrayIconSender, Icon, MenuBuilder, TrayIcon, TrayIconEvent};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -31,7 +31,7 @@ impl std::error::Error for Error {}
 #[derive(Debug, Clone)]
 pub struct TrayIconBuilder<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     pub(crate) icon: Result<Icon, Error>,
     pub(crate) menu: Option<MenuBuilder<T>>,
@@ -44,7 +44,7 @@ where
 
 impl<T> TrayIconBuilder<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     #[allow(clippy::new_without_default)]
     pub fn new() -> TrayIconBuilder<T> {

@@ -9,7 +9,9 @@ use winapi::um::winuser;
 
 use super::wchar::wchar;
 use super::{msgs, winnotifyicon::WinNotifyIcon, MenuSys};
-use crate::{trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase};
+use crate::{
+    trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase, TrayIconEvent,
+};
 
 pub type WinTrayIcon<T> = WindowBox<T>;
 
@@ -17,11 +19,11 @@ pub type WinTrayIcon<T> = WindowBox<T>;
 #[derive(Debug)]
 pub struct WindowBox<T>(*mut WinTrayIconImpl<T>)
 where
-    T: PartialEq + Clone + 'static + Send + Sync;
+    T: TrayIconEvent;
 
 impl<T> Drop for WindowBox<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     fn drop(&mut self) {
         unsafe {
@@ -35,7 +37,7 @@ where
 
 impl<T> Deref for WindowBox<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     type Target = WinTrayIconImpl<T>;
 
@@ -46,7 +48,7 @@ where
 
 impl<T> DerefMut for WindowBox<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *(self.0) }
@@ -59,7 +61,7 @@ where
 #[derive(Debug)]
 pub struct WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     hwnd: HWND,
     sender: TrayIconSender<T>,
@@ -71,12 +73,12 @@ where
     msg_taskbarcreated: Option<UINT>,
 }
 
-unsafe impl<T> Send for WinTrayIconImpl<T> where T: PartialEq + Clone + Send + Sync {}
-unsafe impl<T> Sync for WinTrayIconImpl<T> where T: PartialEq + Clone + Send + Sync {}
+unsafe impl<T> Send for WinTrayIconImpl<T> where T: TrayIconEvent {}
+unsafe impl<T> Sync for WinTrayIconImpl<T> where T: TrayIconEvent {}
 
 impl<T> WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     #[allow(clippy::new_ret_no_self)]
     #[allow(clippy::too_many_arguments)]
@@ -268,7 +270,7 @@ where
 
 impl<T> TrayIconBase<T> for WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     /// Set the tooltip
     fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error> {
@@ -309,7 +311,7 @@ where
 
 impl<T> Drop for WinTrayIconImpl<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     fn drop(&mut self) {
         self.notify_icon.remove();

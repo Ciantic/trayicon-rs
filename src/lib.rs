@@ -19,6 +19,10 @@ mod trayicon;
 mod trayiconbuilder;
 mod trayiconsender;
 
+/// Helper trait that combines the common trait bounds used throughout the library
+pub(crate) trait TrayIconEvent: PartialEq + Clone + 'static + Send + Sync {}
+impl<T> TrayIconEvent for T where T: PartialEq + Clone + 'static + Send + Sync {}
+
 // Public api
 pub use crate::icon::Icon;
 pub use crate::menubuilder::{MenuBuilder, MenuItem};
@@ -47,7 +51,7 @@ pub(crate) use crate::sys::{
 /// TrayIconSys must implement this
 pub(crate) trait TrayIconBase<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;

@@ -1,9 +1,9 @@
-use crate::{Error, Icon};
+use crate::{Error, Icon, TrayIconEvent};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuItem<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     Separator,
     Item {
@@ -31,7 +31,7 @@ where
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct MenuBuilder<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     pub(crate) menu_items: Vec<MenuItem<T>>,
 }
@@ -43,7 +43,7 @@ where
 /// conditionally some items.
 impl<T> MenuBuilder<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     pub fn new() -> MenuBuilder<T> {
         MenuBuilder { menu_items: vec![] }

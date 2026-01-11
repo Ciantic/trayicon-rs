@@ -1,4 +1,4 @@
-use crate::{trayiconsender::TrayIconSender, Error, MenuBuilder, MenuItem};
+use crate::{trayiconsender::TrayIconSender, Error, MenuBuilder, MenuItem, TrayIconEvent};
 use objc2::rc::{Allocated, Retained};
 use objc2::runtime::Sel;
 use objc2::{class, define_class, msg_send, DeclaredClass, MainThreadOnly};
@@ -65,7 +65,7 @@ impl Drop for MenuTarget {
 
 pub struct MacMenu<T>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     pub(crate) ids: HashMap<usize, T>,
     pub(crate) menu: Retained<NSMenu>,
@@ -79,7 +79,7 @@ pub fn build_menu<T>(
     sender: &TrayIconSender<T>,
 ) -> Result<MacMenu<T>, Error>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     let mut j = 0;
     let menu_ids = Arc::new(Mutex::new(HashMap::new()));
@@ -102,7 +102,7 @@ fn build_menu_inner<T>(
     menu_ids: &Arc<Mutex<HashMap<isize, T>>>,
 ) -> Result<MacMenu<T>, Error>
 where
-    T: PartialEq + Clone + 'static + Send + Sync,
+    T: TrayIconEvent,
 {
     let mut map: HashMap<usize, T> = HashMap::new();
     let mtm = unsafe { MainThreadMarker::new_unchecked() };
@@ -235,7 +235,7 @@ where
     })
 }
 
-impl<T: PartialEq + Clone + 'static + Send + Sync> MacMenu<T> {
+impl<T: TrayIconEvent> MacMenu<T> {
     /// Update the menu target with a new sender
     pub fn update_sender(&mut self, sender: &TrayIconSender<T>) {
         // Create new target with the real sender
