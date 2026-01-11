@@ -48,9 +48,8 @@ where
     T: TrayIconEvent,
 {
     let mut menu: Option<MenuSys<T>> = None;
-    // TODO: use tooltip and icon
-    let _tooltip = &builder.tooltip;
-    let _hicon = &builder.icon.as_ref()?.sys;
+    let tooltip = builder.tooltip.clone().unwrap_or_default();
+    let icon = builder.icon.as_ref()?;
     let on_click = builder.on_click.clone();
     let on_right_click = builder.on_right_click.clone();
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
@@ -87,6 +86,8 @@ where
     Ok(TrayIconSys::new(
         sender,
         menu,
+        Some(icon),
+        tooltip,
         // notify_icon,
         on_click,
         on_double_click,

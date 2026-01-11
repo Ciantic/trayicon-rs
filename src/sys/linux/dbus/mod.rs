@@ -2,10 +2,9 @@ mod canonical_dbus_menu;
 mod status_notifier_item;
 mod status_notifier_watcher;
 pub use canonical_dbus_menu::*;
-pub use status_notifier_item::StatusNotifierEvent;
-pub use status_notifier_item::StatusNotifierItemImpl;
+pub use status_notifier_item::{IconData, StatusNotifierEvent, StatusNotifierItemImpl};
 pub use status_notifier_watcher::StatusNotifierWatcherProxy;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock, Mutex};
 use zbus::names::OwnedWellKnownName;
 
 static DBUS_CONNECTION: LazyLock<zbus::Connection> = LazyLock::new(|| {
@@ -37,15 +36,28 @@ where
 pub fn register_notifier_item_watcher_blocking(
     connection: &zbus::Connection,
     channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
-) -> StatusNotifierWatcherProxy<'static> {
+    icon_buffer: Option<Vec<u8>>,
+    icon_width: u32,
+    icon_height: u32,
+    tooltip: String,
+) -> (StatusNotifierWatcherProxy<'static>, Arc<Mutex<IconData>>) {
     // Create the StatusNotifierWatcher proxy and register our item
     return futures::executor::block_on(async {
         let unique_name = format!("org.kde.StatusNotifierItem-{}-1", std::process::id()); // TODO: make unique
         let owned_name = OwnedWellKnownName::try_from(unique_name.clone()).unwrap();
         let _ = connection.request_name(owned_name).await;
+
+        let icon_data = Arc::new(Mutex::new(IconData {
+            buffer: icon_buffer,
+            width: icon_width,
+            height: icon_height,
+        }));
+
         let status_notifier_item = StatusNotifierItemImpl {
             id: unique_name.clone(),
             channel_sender,
+            icon_data: icon_data.clone(),
+            tooltip,
         };
         let _ = connection
             .object_server()
@@ -88,6 +100,6 @@ pub fn register_notifier_item_watcher_blocking(
             }
         }
 
-        proxy
+        (proxy, icon_data)
     });
 }

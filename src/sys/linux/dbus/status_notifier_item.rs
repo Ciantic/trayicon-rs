@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use zbus::interface;
 use zbus::object_server::SignalEmitter;
 
@@ -15,11 +16,20 @@ pub enum StatusNotifierEvent {
     SecondaryActivate(i32, i32),
 }
 
+#[derive(Debug, Clone)]
+pub struct IconData {
+    pub buffer: Option<Vec<u8>>,
+    pub width: u32,
+    pub height: u32,
+}
+
 // Minimal in-process implementation of `org.kde.StatusNotifierItem` to register
 #[derive(Debug)]
 pub struct StatusNotifierItemImpl {
     pub id: String,
     pub channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
+    pub icon_data: Arc<Mutex<IconData>>,
+    pub tooltip: String,
 }
 
 #[interface(name = "org.kde.StatusNotifierItem")]
@@ -95,6 +105,13 @@ impl StatusNotifierItemImpl {
     #[zbus(property)]
     pub fn icon_name(&self) -> zbus::fdo::Result<String> {
         println!("icon_name() called");
+        // Return empty string so that icon_pixmap is used instead
+        // If we return a theme icon name, it will be preferred over the pixmap
+        if let Ok(icon_data) = self.icon_data.lock() {
+            if icon_data.buffer.is_some() {
+                return Ok(String::new());
+            }
+        }
         Ok(String::from("application-x-executable"))
     }
 
@@ -102,7 +119,29 @@ impl StatusNotifierItemImpl {
     #[zbus(property)]
     pub fn icon_pixmap(&self) -> zbus::fdo::Result<Vec<(i32, i32, Vec<u8>)>> {
         println!("icon_pixmap() called");
-        // Create a simple 24x24 ARGB pixmap (red square with alpha channel)
+
+        // If we have icon data, use it
+        if let Ok(icon_data) = self.icon_data.lock() {
+            if let Some(ref buffer) = icon_data.buffer {
+                let width = icon_data.width as i32;
+                let height = icon_data.height as i32;
+
+                // Convert RGBA to ARGB if needed
+                let mut argb_pixmap = Vec::with_capacity(buffer.len());
+                for chunk in buffer.chunks(4) {
+                    if chunk.len() == 4 {
+                        argb_pixmap.push(chunk[3]); // Alpha
+                        argb_pixmap.push(chunk[0]); // Red
+                        argb_pixmap.push(chunk[1]); // Green
+                        argb_pixmap.push(chunk[2]); // Blue
+                    }
+                }
+
+                return Ok(vec![(width, height, argb_pixmap)]);
+            }
+        }
+
+        // Fallback: Create a simple 24x24 ARGB pixmap (red square with alpha channel)
         let width = 24i32;
         let height = 24i32;
         let mut pixmap = Vec::with_capacity((width * height * 4) as usize);
@@ -180,12 +219,7 @@ impl StatusNotifierItemImpl {
     pub fn tool_tip(
         &self,
     ) -> zbus::fdo::Result<(String, Vec<(i32, i32, Vec<u8>)>, String, String)> {
-        Ok((
-            String::from("Tooltip"),
-            vec![],
-            String::new(),
-            String::new(),
-        ))
+        Ok((String::new(), vec![], self.tooltip.clone(), String::new()))
     }
 
     /// WindowId property

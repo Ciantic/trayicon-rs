@@ -1,7 +1,8 @@
 use super::MenuSys;
 use crate::{
     sys::dbus::{
-        get_dbus_connection, register_notifier_item_watcher_blocking, StatusNotifierEvent,
+        get_dbus_connection, register_notifier_item_watcher_blocking, IconData,
+        StatusNotifierEvent, StatusNotifierItemImpl,
     },
     trayiconsender::TrayIconSender,
     Error, TrayIconBase, TrayIconEvent,
@@ -20,6 +21,7 @@ where
     #[allow(dead_code)]
     menu: Option<MenuSys<T>>,
     event_sender: Arc<Mutex<Option<std::sync::mpsc::Sender<(i32, T)>>>>,
+    icon_data: Arc<Mutex<IconData>>,
     // notify_icon: WinNotifyIcon,
     // on_click: Option<T>,
     // on_double_click: Option<T>,
@@ -36,6 +38,8 @@ where
     pub(crate) fn new(
         tray_icon_sender: TrayIconSender<T>,
         menu: Option<MenuSys<T>>,
+        icon: Option<&crate::Icon>,
+        tooltip: String,
         // notify_icon: WinNotifyIcon,
         on_click: Option<T>,
         _on_double_click: Option<T>,
@@ -43,7 +47,28 @@ where
     ) -> Result<KdeTrayIconImpl<T>, Error> {
         let connection = get_dbus_connection();
         let (sender, receiver) = std::sync::mpsc::channel();
-        let _ = register_notifier_item_watcher_blocking(connection, sender.clone());
+
+        // Extract icon data if available
+        let (icon_buffer, icon_width, icon_height) = if let Some(icon) = icon {
+            // Use decoded RGBA pixels if available, otherwise fall back to raw buffer
+            let buffer = if let Some(ref rgba) = icon.sys.rgba_pixels {
+                Some(rgba.clone())
+            } else {
+                Some(icon.sys.buffer.to_vec())
+            };
+            (buffer, icon.sys.width, icon.sys.height)
+        } else {
+            (None, 0, 0)
+        };
+
+        let (_, icon_data_ref) = register_notifier_item_watcher_blocking(
+            connection,
+            sender.clone(),
+            icon_buffer,
+            icon_width,
+            icon_height,
+            tooltip,
+        );
 
         // Store the event_sender if menu exists
         let event_sender = if let Some(ref m) = menu {
@@ -74,6 +99,7 @@ where
             sender: tray_icon_sender,
             menu,
             event_sender,
+            icon_data: icon_data_ref,
             // notify_icon,
             // on_click,
             // on_double_click,
@@ -86,8 +112,44 @@ impl<T> TrayIconBase<T> for KdeTrayIconImpl<T>
 where
     T: TrayIconEvent,
 {
-    fn set_icon(&mut self, _kde_tray_icon: &crate::Icon) -> Result<(), Error> {
-        // TODO: ...
+    fn set_icon(&mut self, kde_tray_icon: &crate::Icon) -> Result<(), Error> {
+        // Extract the new icon data
+        let (buffer, width, height) = if let Some(ref rgba) = kde_tray_icon.sys.rgba_pixels {
+            (
+                Some(rgba.clone()),
+                kde_tray_icon.sys.width,
+                kde_tray_icon.sys.height,
+            )
+        } else {
+            (
+                Some(kde_tray_icon.sys.buffer.to_vec()),
+                kde_tray_icon.sys.width,
+                kde_tray_icon.sys.height,
+            )
+        };
+
+        // Update the shared icon data
+        if let Ok(mut icon_data) = self.icon_data.lock() {
+            icon_data.buffer = buffer;
+            icon_data.width = width;
+            icon_data.height = height;
+        }
+
+        // Emit NewIcon signal to notify the tray that the icon changed
+        let connection = get_dbus_connection();
+        futures::executor::block_on(async {
+            if let Ok(obj) = connection
+                .object_server()
+                .interface::<_, StatusNotifierItemImpl>("/StatusNotifierItem")
+                .await
+            {
+                let emitter = obj.signal_emitter();
+                if let Err(e) = StatusNotifierItemImpl::new_icon(&emitter).await {
+                    eprintln!("Failed to emit NewIcon signal: {:?}", e);
+                }
+            }
+        });
+
         Ok(())
     }
 
