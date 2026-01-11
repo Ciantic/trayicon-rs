@@ -3,8 +3,11 @@ use zbus::names::OwnedWellKnownName;
 
 use super::MenuSys;
 use crate::{
-    sys::dbus::register_notifier_item_watcher_blocking, sys::dbus::StatusNotifierWatcherProxy,
-    trayiconsender::TrayIconSender, Error, TrayIconBase,
+    sys::dbus::{
+        get_dbus_connection, register_notifier_item_watcher_blocking, StatusNotifierWatcherProxy,
+    },
+    trayiconsender::TrayIconSender,
+    Error, TrayIconBase,
 };
 
 #[derive(Debug)]
@@ -12,7 +15,7 @@ pub struct KdeTrayIconImpl<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    connection: zbus::Connection,
+    connection: &'static zbus::Connection,
     // status_notifier_item: StatusNotifierItemImpl,
     status_notifier_proxy: Box<StatusNotifierWatcherProxy<'static>>,
     sender: TrayIconSender<T>,
@@ -41,7 +44,8 @@ where
     where
         T: PartialEq + Clone + 'static,
     {
-        let (connection, status_notifier_proxy) = register_notifier_item_watcher_blocking();
+        let connection = get_dbus_connection();
+        let status_notifier_proxy = register_notifier_item_watcher_blocking(connection);
 
         Ok(KdeTrayIconImpl {
             connection,

@@ -4,27 +4,37 @@ mod status_notifier_watcher;
 pub use canonical_dbus_menu::*;
 pub use status_notifier_item::StatusNotifierItemImpl;
 pub use status_notifier_watcher::StatusNotifierWatcherProxy;
+use std::sync::LazyLock;
 use zbus::names::OwnedWellKnownName;
 
-pub fn register_dbus_menu_blocking() -> zbus::Connection {
+static DBUS_CONNECTION: LazyLock<zbus::Connection> = LazyLock::new(|| {
+    futures::executor::block_on(async {
+        zbus::Connection::session()
+            .await
+            .expect("Failed to connect to session bus")
+    })
+});
+
+pub fn get_dbus_connection() -> &'static zbus::Connection {
+    &DBUS_CONNECTION
+}
+
+pub fn register_dbus_menu_blocking(connection: &zbus::Connection) {
     return futures::executor::block_on(async {
-        let connection = zbus::Connection::session().await.unwrap();
-        println!("Registering DbusMenu on /MenuBar");
         let dbus_menu = DbusMenu();
         let _ = connection
             .object_server()
             .at("/MenuBar", dbus_menu)
             .await
             .unwrap();
-        connection
     });
 }
 
 pub fn register_notifier_item_watcher_blocking(
-) -> (zbus::Connection, StatusNotifierWatcherProxy<'static>) {
+    connection: &zbus::Connection,
+) -> StatusNotifierWatcherProxy<'static> {
     // Create the StatusNotifierWatcher proxy and register our item
     return futures::executor::block_on(async {
-        let connection = zbus::Connection::session().await.unwrap();
         let unique_name = format!("org.kde.StatusNotifierItem-{}-1", std::process::id()); // TODO: make unique
         let owned_name = OwnedWellKnownName::try_from(unique_name.clone()).unwrap();
         let _ = connection.request_name(owned_name).await;
@@ -72,6 +82,6 @@ pub fn register_notifier_item_watcher_blocking(
             }
         }
 
-        (connection, proxy)
+        proxy
     });
 }

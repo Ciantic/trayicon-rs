@@ -14,7 +14,7 @@ pub struct MenuSys<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    connection: zbus::Connection,
+    connection: &'static zbus::Connection,
     ids: HashMap<usize, T>,
 }
 
@@ -23,7 +23,8 @@ where
     T: PartialEq + Clone + 'static,
 {
     pub(crate) fn new() -> Result<MenuSys<T>, Error> {
-        let connection = register_dbus_menu_blocking();
+        let connection = get_dbus_connection();
+        register_dbus_menu_blocking(connection);
         Ok(MenuSys {
             connection,
             ids: HashMap::new(),
