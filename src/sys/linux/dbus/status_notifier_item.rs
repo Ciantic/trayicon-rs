@@ -188,13 +188,13 @@ impl StatusNotifierItemImpl {
         )
     }
 
-    /// OverlayIconName property
+    /// OverlayIconName property (icon at the corner of the main icon)
     #[zbus(property)]
     pub fn overlay_icon_name(&self) -> zbus::fdo::Result<String> {
-        Ok(String::from("help-about"))
+        Ok(String::from(""))
     }
 
-    /// OverlayIconPixmap property
+    /// OverlayIconPixmap property (icon at the corner of the main icon)
     #[zbus(property)]
     pub fn overlay_icon_pixmap(&self) -> zbus::fdo::Result<Vec<(i32, i32, Vec<u8>)>> {
         Ok(vec![])
