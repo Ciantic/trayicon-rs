@@ -22,7 +22,7 @@ pub fn get_dbus_connection() -> &'static zbus::Connection {
 
 pub fn register_dbus_menu_blocking(connection: &zbus::Connection) {
     return futures::executor::block_on(async {
-        let dbus_menu = DbusMenu();
+        let dbus_menu = DbusMenu::new();
         let _ = connection
             .object_server()
             .at("/MenuBar", dbus_menu)

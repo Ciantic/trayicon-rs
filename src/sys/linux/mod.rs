@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Error, MenuBuilder, MenuItem, TrayIconBuilder, TrayIconEvent};
+use crate::{Error, MenuBuilder, TrayIconBuilder, TrayIconEvent};
 
 mod dbus;
 mod kdeicon;
@@ -14,7 +14,7 @@ pub struct MenuSys<T>
 where
     T: TrayIconEvent,
 {
-    connection: &'static zbus::Connection,
+    #[allow(dead_code)]
     ids: HashMap<usize, T>,
 }
 
@@ -26,7 +26,6 @@ where
         let connection = get_dbus_connection();
         register_dbus_menu_blocking(connection);
         Ok(MenuSys {
-            connection,
             ids: HashMap::new(),
         })
     }
@@ -38,8 +37,9 @@ where
     T: TrayIconEvent,
 {
     let mut menu: Option<MenuSys<T>> = None;
-    let tooltip = &builder.tooltip;
-    let hicon = &builder.icon.as_ref()?.sys;
+    // TODO: use tooltip and icon
+    let _tooltip = &builder.tooltip;
+    let _hicon = &builder.icon.as_ref()?.sys;
     let on_click = builder.on_click.clone();
     let on_right_click = builder.on_right_click.clone();
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
@@ -74,17 +74,11 @@ where
 ///
 /// Having a j value as mutable reference it's capable of handling nested
 /// submenus
-fn build_menu_inner<T>(j: &mut usize, builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
+fn build_menu_inner<T>(_j: &mut usize, _builder: &MenuBuilder<T>) -> Result<MenuSys<T>, Error>
 where
     T: TrayIconEvent,
 {
     MenuSys::new()
-}
-
-// For pattern matching, these are in own mod
-mod msgs {
-    pub const WM_USER_TRAYICON: u32 = 0x400 + 1001;
-    pub const WM_USER_SHOW_MENU: u32 = 0x400 + 1002;
 }
 
 #[cfg(test)]

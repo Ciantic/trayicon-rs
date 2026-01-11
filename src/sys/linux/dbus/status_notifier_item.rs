@@ -1,6 +1,7 @@
 use zbus::interface;
 use zbus::object_server::SignalEmitter;
 
+#[allow(dead_code)]
 pub enum StatusNotifierEvent {
     /// Activated at the given coordinates (x, y), equivalent of left-click
     Activate(i32, i32),
