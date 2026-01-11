@@ -9,6 +9,10 @@ mod sys;
 #[path = "./sys/macos/mod.rs"]
 mod sys;
 
+#[cfg(target_os = "linux")]
+#[path = "./sys/linux/mod.rs"]
+mod sys;
+
 mod icon;
 mod menubuilder;
 mod trayicon;
