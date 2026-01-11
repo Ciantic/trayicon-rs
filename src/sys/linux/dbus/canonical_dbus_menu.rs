@@ -53,12 +53,11 @@ where
                     OwnedValue::try_from(Value::new(item.label.as_str())).unwrap(),
                 );
 
-                if item.is_disabled {
-                    properties.insert(
-                        "enabled".to_string(),
-                        OwnedValue::try_from(Value::new(false)).unwrap(),
-                    );
-                }
+                // Always set the enabled property explicitly
+                properties.insert(
+                    "enabled".to_string(),
+                    OwnedValue::try_from(Value::new(!item.is_disabled)).unwrap(),
+                );
 
                 if item.is_checkable {
                     properties.insert(
