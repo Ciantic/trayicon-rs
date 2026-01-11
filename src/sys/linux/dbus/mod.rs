@@ -6,6 +6,20 @@ pub use status_notifier_item::StatusNotifierItemImpl;
 pub use status_notifier_watcher::StatusNotifierWatcherProxy;
 use zbus::names::OwnedWellKnownName;
 
+pub fn register_dbus_menu_blocking() -> zbus::Connection {
+    return futures::executor::block_on(async {
+        let connection = zbus::Connection::session().await.unwrap();
+        println!("Registering DbusMenu on /MenuBar");
+        let dbus_menu = DbusMenu();
+        let _ = connection
+            .object_server()
+            .at("/MenuBar", dbus_menu)
+            .await
+            .unwrap();
+        connection
+    });
+}
+
 pub fn register_notifier_item_watcher_blocking(
 ) -> (zbus::Connection, StatusNotifierWatcherProxy<'static>) {
     // Create the StatusNotifierWatcher proxy and register our item
@@ -42,6 +56,20 @@ pub fn register_notifier_item_watcher_blocking(
         match proxy.register_status_notifier_item(&unique_name).await {
             Ok(_) => println!("Successfully registered as: {}", unique_name),
             Err(e) => println!("Failed to register: {:?}", e),
+        }
+
+        // Get the object from the server and emit the NewIcon signal
+        // This tells the tray host that our icon is ready
+        if let Ok(obj) = connection
+            .object_server()
+            .interface::<_, StatusNotifierItemImpl>("/StatusNotifierItem")
+            .await
+        {
+            println!("Emitting NewIcon signal to notify tray of icon availability");
+            let emitter = obj.signal_emitter();
+            if let Err(e) = StatusNotifierItemImpl::new_icon(&emitter).await {
+                println!("Failed to emit NewIcon signal: {:?}", e);
+            }
         }
 
         (connection, proxy)
