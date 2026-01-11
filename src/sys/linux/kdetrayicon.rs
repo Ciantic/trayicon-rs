@@ -20,7 +20,7 @@ where
     // sender: TrayIconSender<T>,
     #[allow(dead_code)]
     menu: Option<MenuSys<T>>,
-    event_sender: Arc<Mutex<Option<std::sync::mpsc::Sender<(i32, T)>>>>,
+    event_sender: Option<std::sync::mpsc::Sender<(i32, T)>>,
     icon_data: Arc<Mutex<IconData>>,
     tooltip_data: Arc<Mutex<String>>,
     // notify_icon: WinNotifyIcon,
@@ -72,11 +72,7 @@ where
         );
 
         // Store the event_sender if menu exists
-        let event_sender = if let Some(ref m) = menu {
-            m.event_sender.clone()
-        } else {
-            Arc::new(Mutex::new(None))
-        };
+        let event_sender = menu.as_ref().and_then(|m| m.event_sender.clone());
 
         let tray_sender = tray_icon_sender.clone();
         std::thread::spawn(move || {

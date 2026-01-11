@@ -191,10 +191,8 @@ where
         if event_id == "clicked" {
             if let Some(item) = self.find_item_by_id(id, &self.menu_sys.items) {
                 if let Some(event) = &item.event_id {
-                    if let Ok(sender) = self.menu_sys.event_sender.lock() {
-                        if let Some(tx) = sender.as_ref() {
-                            let _ = tx.send((id, event.clone()));
-                        }
+                    if let Some(tx) = &self.menu_sys.event_sender {
+                        let _ = tx.send((id, event.clone()));
                     }
                 }
             }

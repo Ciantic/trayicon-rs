@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use crate::{Error, MenuBuilder, MenuItem, TrayIconBuilder, TrayIconEvent};
 
 mod dbus;
@@ -27,7 +25,7 @@ where
     T: TrayIconEvent,
 {
     pub(crate) items: Vec<MenuItemData<T>>,
-    pub(crate) event_sender: Arc<Mutex<Option<std::sync::mpsc::Sender<(i32, T)>>>>,
+    pub(crate) event_sender: Option<std::sync::mpsc::Sender<(i32, T)>>,
 }
 
 impl<T> MenuSys<T>
@@ -37,7 +35,7 @@ where
     pub(crate) fn new() -> Result<MenuSys<T>, Error> {
         Ok(MenuSys {
             items: vec![],
-            event_sender: Arc::new(Mutex::new(None)),
+            event_sender: None,
         })
     }
 }
@@ -58,16 +56,14 @@ where
 
     // Try to get a popup menu
     if let Some(rhmenu) = &builder.menu {
-        let built_menu = rhmenu.build()?;
+        let mut built_menu = rhmenu.build()?;
 
         // Set up event handling channel
         let (event_tx, event_rx) = std::sync::mpsc::channel::<(i32, T)>();
         let sender_clone = sender.clone();
 
         // Store the sender in MenuSys
-        if let Ok(mut event_sender) = built_menu.event_sender.lock() {
-            *event_sender = Some(event_tx.clone());
-        }
+        built_menu.event_sender = Some(event_tx.clone());
 
         // Spawn thread to handle menu events
         std::thread::spawn(move || {
