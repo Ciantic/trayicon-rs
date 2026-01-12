@@ -74,9 +74,16 @@ where
     /// - Active: Normal visible state
     /// - NeedsAttention: Icon blinks/animates to draw attention
     /// - Passive: Icon is hidden or minimized
+    ///
     /// On other platforms, this does nothing by default.
     fn set_status(&mut self, _status: TrayIconStatus) -> Result<(), Error> {
         Ok(())
+    }
+
+    /// KDE specific: Get the XDG activation token provided by the system tray
+    /// when the user clicks the tray icon.
+    fn get_xdg_activation_token(&self) -> Option<String> {
+        None
     }
 }
 

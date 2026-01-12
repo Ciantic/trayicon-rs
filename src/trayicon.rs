@@ -105,6 +105,10 @@ where
     pub fn set_status(&mut self, status: TrayIconStatus) -> Result<(), Error> {
         self.sys.set_status(status)
     }
+
+    pub fn get_xdg_activation_token(&self) -> Option<String> {
+        self.sys.get_xdg_activation_token()
+    }
 }
 
 unsafe impl<T> Sync for TrayIcon<T> where T: TrayIconEvent {}

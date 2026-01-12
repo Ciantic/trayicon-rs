@@ -23,6 +23,7 @@ where
     event_sender: Option<std::sync::mpsc::Sender<(i32, T)>>,
     icon_data: Arc<Mutex<IconData>>,
     tooltip_data: Arc<Mutex<String>>,
+    last_xdg_activation_token: Arc<Mutex<Option<String>>>,
     // notify_icon: WinNotifyIcon,
     // on_click: Option<T>,
     // on_double_click: Option<T>,
@@ -75,6 +76,9 @@ where
         let event_sender = menu.as_ref().and_then(|m| m.event_sender.clone());
 
         let tray_sender = tray_icon_sender.clone();
+
+        let last_xdg_activation_token = Arc::new(Mutex::new(None));
+        let last_xdg_activation_token_clone = last_xdg_activation_token.clone();
         std::thread::spawn(move || {
             while let Ok(event) = receiver.recv() {
                 match event {
@@ -82,6 +86,11 @@ where
                     StatusNotifierEvent::Activate(_x, _y) => {
                         if let Some(on_click) = &on_click {
                             tray_sender.send(on_click);
+                        }
+                    }
+                    StatusNotifierEvent::ProvideXdgActivationToken(token) => {
+                        if let Ok(mut last_token) = last_xdg_activation_token_clone.lock() {
+                            *last_token = Some(token);
                         }
                     }
                     _ => {}
@@ -98,6 +107,7 @@ where
             event_sender,
             icon_data: icon_data_ref,
             tooltip_data: tooltip_data_ref,
+            last_xdg_activation_token,
             // notify_icon,
             // on_click,
             // on_double_click,
@@ -246,5 +256,13 @@ where
             }
         });
         Ok(())
+    }
+
+    fn get_xdg_activation_token(&self) -> Option<String> {
+        if let Ok(token_lock) = self.last_xdg_activation_token.lock() {
+            token_lock.clone()
+        } else {
+            None
+        }
     }
 }

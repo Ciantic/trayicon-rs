@@ -131,6 +131,9 @@ impl ApplicationHandler<UserEvents> for MyApplication {
             UserEvents::Exit => event_loop.exit(),
             UserEvents::LeftClickTrayIcon => {
                 println!("Left click tray icon");
+                if let Some(token) = self.tray_icon.get_xdg_activation_token() {
+                    println!("XDG Activation Token: {}", token);
+                }
                 self.tray_icon.show_menu().unwrap();
             }
             UserEvents::DoubleClickTrayIcon => {
