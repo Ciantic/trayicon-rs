@@ -1,4 +1,6 @@
-use crate::{Error, Icon, MenuBuilder, TrayIconBase, TrayIconBuilder, TrayIconEvent};
+use crate::{
+    Error, Icon, MenuBuilder, TrayIconBase, TrayIconBuilder, TrayIconEvent, TrayIconStatus,
+};
 
 pub struct TrayIcon<T>
 where
@@ -89,6 +91,16 @@ where
 
     pub fn show_menu(&mut self) -> Result<(), Error> {
         self.sys.show_menu()
+    }
+
+    /// Set the status of the tray icon.
+    /// On KDE, this controls the StatusNotifierItem status:
+    /// - `TrayIconStatus::Active`: Normal visible state
+    /// - `TrayIconStatus::NeedsAttention`: Icon blinks/animates to draw attention
+    /// - `TrayIconStatus::Passive`: Icon is hidden or minimized
+    /// On other platforms, this does nothing.
+    pub fn set_status(&mut self, status: TrayIconStatus) -> Result<(), Error> {
+        self.sys.set_status(status)
     }
 }
 

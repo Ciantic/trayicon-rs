@@ -204,6 +204,7 @@ impl StatusNotifierItemImpl {
     #[zbus(property)]
     pub fn status(&self) -> zbus::fdo::Result<String> {
         println!("status() called");
+        // Return "Active" by default, but this can be changed to "NeedsAttention" or "Passive"
         Ok(String::from("Active"))
     }
 

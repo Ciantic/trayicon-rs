@@ -222,4 +222,29 @@ where
         // With KDE, we can't just show the menu programmatically like on Windows and MacOS, it always opens with right click on the tray icon. Leaving this empty for now.
         Ok(())
     }
+
+    fn set_status(&mut self, status: crate::TrayIconStatus) -> Result<(), Error> {
+        use crate::TrayIconStatus;
+
+        let status_str = match status {
+            TrayIconStatus::Active => "Active",
+            TrayIconStatus::NeedsAttention => "NeedsAttention",
+            TrayIconStatus::Passive => "Passive",
+        };
+
+        let connection = get_dbus_connection();
+        futures::executor::block_on(async {
+            if let Ok(obj) = connection
+                .object_server()
+                .interface::<_, StatusNotifierItemImpl>("/StatusNotifierItem")
+                .await
+            {
+                let emitter = obj.signal_emitter();
+                if let Err(e) = StatusNotifierItemImpl::new_status(&emitter, status_str).await {
+                    eprintln!("Failed to emit NewStatus signal: {:?}", e);
+                }
+            }
+        });
+        Ok(())
+    }
 }

@@ -30,6 +30,17 @@ pub use crate::trayicon::TrayIcon;
 pub use crate::trayiconbuilder::Error;
 pub use crate::trayiconbuilder::TrayIconBuilder;
 
+/// Status/visibility state for the tray icon (KDE StatusNotifierItem status)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrayIconStatus {
+    /// Normal visible state
+    Active,
+    /// Icon blinks/animates to draw attention (KDE)
+    NeedsAttention,
+    /// Icon is hidden or minimized (KDE)
+    Passive,
+}
+
 // Each OS specific implementation must export following:
 pub(crate) use crate::sys::{
     // MenuBuilder<T> -> Result<MenuSys<T>, Error>
@@ -57,6 +68,16 @@ where
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;
     fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error>;
     fn show_menu(&mut self) -> Result<(), Error>;
+
+    /// Set the status of the tray icon.
+    /// On KDE, this controls the StatusNotifierItem status:
+    /// - Active: Normal visible state
+    /// - NeedsAttention: Icon blinks/animates to draw attention
+    /// - Passive: Icon is hidden or minimized
+    /// On other platforms, this does nothing by default.
+    fn set_status(&mut self, _status: TrayIconStatus) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 /// IconSys must implement this

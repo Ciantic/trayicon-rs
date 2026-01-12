@@ -5,13 +5,16 @@ use winit::{
     window::Window,
 };
 
-use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder};
+use trayicon::{Icon, MenuBuilder, MenuItem, TrayIcon, TrayIconBuilder, TrayIconStatus};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum UserEvents {
     RightClickTrayIcon,
     LeftClickTrayIcon,
     DoubleClickTrayIcon,
+    SetStatusActive,
+    SetStatusNeedsAttention,
+    SetStatusPassive,
     Exit,
     Item1,
     Item2,
@@ -49,6 +52,19 @@ fn main() {
                 .item("Item 3 Replace Menu 👍", UserEvents::Item3)
                 .item("Item 2 Change Icon Green", UserEvents::Item2)
                 .item("Item 1 Change Icon Red", UserEvents::Item1)
+                .submenu(
+                    "Set Status (KDE only feature)",
+                    MenuBuilder::new()
+                        .item("Set Status: Active (Normal)", UserEvents::SetStatusActive)
+                        .item(
+                            "Set Status: NeedsAttention (Blink)",
+                            UserEvents::SetStatusNeedsAttention,
+                        )
+                        .item(
+                            "Set Status: Passive (Hide behind arrow)",
+                            UserEvents::SetStatusPassive,
+                        ),
+                )
                 .separator()
                 .submenu(
                     "Sub Menu",
@@ -163,6 +179,17 @@ impl ApplicationHandler<UserEvents> for MyApplication {
             UserEvents::LeftClickTrayIcon => {
                 println!("Left click tray icon - showing menu");
                 self.tray_icon.show_menu().unwrap();
+            }
+            UserEvents::SetStatusActive => {
+                self.tray_icon.set_status(TrayIconStatus::Active).unwrap();
+            }
+            UserEvents::SetStatusNeedsAttention => {
+                self.tray_icon
+                    .set_status(TrayIconStatus::NeedsAttention)
+                    .unwrap();
+            }
+            UserEvents::SetStatusPassive => {
+                self.tray_icon.set_status(TrayIconStatus::Passive).unwrap();
             }
             // Events::DoubleClickTrayIcon => todo!(),
             // Events::DisabledItem1 => todo!(),
