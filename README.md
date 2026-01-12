@@ -1,6 +1,6 @@
 # TrayIcon
 
-Currently I target Windows tray icon implementation, with popup menu, click, double click events. Goal is to provide a channel for events and ability to plug in [winit](https://github.com/rust-windowing/winit) event loop easily.
+Currently I target KDE/Windows tray icon implementation, with popup menu, click, double click events. I don't use MacOS, but I try to cargo check that it still compiles. Library has ability to plug in [winit](https://github.com/rust-windowing/winit) event loop easily as well as other event loop structures.
 
 [Open here a full working example with winit crate 🢅](https://github.com/Ciantic/trayicon-rs/blob/master/examples/winit/src/main.rs)
 
