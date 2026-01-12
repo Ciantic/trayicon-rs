@@ -89,23 +89,26 @@ where
         }
     }
 
-    /// Show the menu
+    /// Show the menu (Windows only)
     ///
-    /// Works only on Windows. On KDE and MacOS right click by default opens the menu, there is no programmatic way to open it.
+    /// On KDE and MacOS right click by default opens the menu, there is no programmatic way to open it.
     pub fn show_menu(&mut self) -> Result<(), Error> {
         self.sys.show_menu()
     }
 
-    /// Set the status of the tray icon.
+    /// Set the status of the tray icon (KDE only)
+    ///
     /// On KDE, this controls the StatusNotifierItem status:
-    /// - `TrayIconStatus::Active`: Normal visible state
-    /// - `TrayIconStatus::NeedsAttention`: Icon blinks/animates to draw attention
-    /// - `TrayIconStatus::Passive`: Icon is hidden or minimized
-    /// On other platforms, this does nothing.
+    /// - Active: Normal visible state
+    /// - NeedsAttention: Icon blinks/animates to draw attention
+    /// - Passive: Icon is hidden or minimized
+    ///
+    /// On other platforms, this does nothing by default.
     pub fn set_status(&mut self, status: TrayIconStatus) -> Result<(), Error> {
         self.sys.set_status(status)
     }
 
+    /// Get the XDG activation token (KDE only)
     pub fn get_xdg_activation_token(&self) -> Option<String> {
         self.sys.get_xdg_activation_token()
     }
