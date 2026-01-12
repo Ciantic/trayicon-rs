@@ -182,9 +182,19 @@ where
 
                     // Right click tray icon
                     winuser::WM_RBUTTONUP => {
-                        // Send right click event
+                        // Send right click event or show menu if on_right_click is None
                         if let Some(e) = self.on_right_click.as_ref() {
                             self.sender.send(e);
+                        } else {
+                            // Default behavior: show menu on right click
+                            if let Some(menu) = &self.menu {
+                                let mut pos = POINT { x: 0, y: 0 };
+                                unsafe {
+                                    winuser::GetCursorPos(&mut pos as _);
+                                    winuser::SetForegroundWindow(self.hwnd);
+                                }
+                                menu.menu.track(self.hwnd, pos.x, pos.y);
+                            }
                         }
                     }
 
