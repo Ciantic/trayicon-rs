@@ -1,3 +1,7 @@
+//! Canonical D-Bus Menu implementation
+//!
+//! https://github.com/gnustep/libs-dbuskit/blob/master/Bundles/DBusMenu/com.canonical.dbusmenu.xml
+
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;

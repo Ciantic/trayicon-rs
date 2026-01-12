@@ -89,6 +89,9 @@ where
         }
     }
 
+    /// Show the menu
+    ///
+    /// Works only on Windows. On KDE and MacOS right click by default opens the menu, there is no programmatic way to open it.
     pub fn show_menu(&mut self) -> Result<(), Error> {
         self.sys.show_menu()
     }

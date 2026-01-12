@@ -43,6 +43,7 @@ fn main() {
         })
         .icon_from_buffer(icon)
         .tooltip("Cool Tray 👀 Icon")
+        // Binding `on_click`, `on_double_click` and `on_right_click` is optional, if not bound it will still open the menu on right click (all platforms) and left click (MacOS).
         .on_click(UserEvents::LeftClickTrayIcon)
         .on_double_click(UserEvents::DoubleClickTrayIcon)
         .on_right_click(UserEvents::RightClickTrayIcon)
@@ -134,7 +135,15 @@ impl ApplicationHandler<UserEvents> for MyApplication {
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvents) {
         match event {
             UserEvents::Exit => event_loop.exit(),
+            UserEvents::LeftClickTrayIcon => {
+                println!("Left click tray icon");
+                self.tray_icon.show_menu().unwrap();
+            }
+            UserEvents::DoubleClickTrayIcon => {
+                println!("Double click tray icon");
+            }
             UserEvents::RightClickTrayIcon => {
+                println!("Right click tray icon");
                 self.tray_icon.show_menu().unwrap();
             }
             UserEvents::CheckItem1 => {
@@ -175,10 +184,6 @@ impl ApplicationHandler<UserEvents> for MyApplication {
             }
             UserEvents::Item4 => {
                 self.tray_icon.set_tooltip("Menu changed!").unwrap();
-            }
-            UserEvents::LeftClickTrayIcon => {
-                println!("Left click tray icon - showing menu");
-                self.tray_icon.show_menu().unwrap();
             }
             UserEvents::SetStatusActive => {
                 self.tray_icon.set_status(TrayIconStatus::Active).unwrap();

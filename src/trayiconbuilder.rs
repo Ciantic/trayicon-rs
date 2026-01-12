@@ -77,16 +77,27 @@ where
         self
     }
 
+    /// Set left-click event handler
+    ///
+    /// Works only on Windows and KDE. In MacOS left click by default opens the menu, binding this is not effective.
     pub fn on_click(mut self, id: T) -> Self {
         self.on_click = Some(id);
         self
     }
 
+    /// Set double click event handler
+    ///
+    /// Works only on Windows. In MacOS and KDE double click is not registered.
     pub fn on_double_click(mut self, id: T) -> Self {
         self.on_double_click = Some(id);
         self
     }
 
+    /// Set right click event handler
+    ///
+    /// Binding works only on Windows. In KDE and MacOS right click by default opens the menu, binding this is not effective.
+    ///
+    /// If not given in Windows it will default to showing the menu on right click like in KDE and MacOS.
     pub fn on_right_click(mut self, id: T) -> Self {
         self.on_right_click = Some(id);
         self
