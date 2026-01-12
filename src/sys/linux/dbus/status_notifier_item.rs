@@ -1,3 +1,4 @@
+use super::super::kdeicon::KdeIcon;
 use std::sync::{Arc, Mutex};
 use zbus::interface;
 use zbus::object_server::SignalEmitter;
@@ -16,19 +17,12 @@ pub enum StatusNotifierEvent {
     SecondaryActivate(i32, i32),
 }
 
-#[derive(Debug, Clone)]
-pub struct IconData {
-    pub buffer: Option<Vec<u8>>,
-    pub width: u32,
-    pub height: u32,
-}
-
 // Minimal in-process implementation of `org.kde.StatusNotifierItem` to register
 #[derive(Debug)]
 pub struct StatusNotifierItemImpl {
     pub id: String,
     pub channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
-    pub icon_data: Arc<Mutex<IconData>>,
+    pub icon_data: Arc<Mutex<KdeIcon>>,
     pub tooltip: Arc<Mutex<String>>,
 }
 
@@ -108,7 +102,7 @@ impl StatusNotifierItemImpl {
         // Return empty string so that icon_pixmap is used instead
         // If we return a theme icon name, it will be preferred over the pixmap
         if let Ok(icon_data) = self.icon_data.lock() {
-            if icon_data.buffer.is_some() {
+            if icon_data.argb_pixels.is_some() {
                 return Ok(String::new());
             }
         }
@@ -122,22 +116,11 @@ impl StatusNotifierItemImpl {
 
         // If we have icon data, use it
         if let Ok(icon_data) = self.icon_data.lock() {
-            if let Some(ref buffer) = icon_data.buffer {
+            if let Some(ref argb_pixmap) = icon_data.argb_pixels {
                 let width = icon_data.width as i32;
                 let height = icon_data.height as i32;
 
-                // Convert RGBA to ARGB if needed
-                let mut argb_pixmap = Vec::with_capacity(buffer.len());
-                for chunk in buffer.chunks(4) {
-                    if chunk.len() == 4 {
-                        argb_pixmap.push(chunk[3]); // Alpha
-                        argb_pixmap.push(chunk[0]); // Red
-                        argb_pixmap.push(chunk[1]); // Green
-                        argb_pixmap.push(chunk[2]); // Blue
-                    }
-                }
-
-                return Ok(vec![(width, height, argb_pixmap)]);
+                return Ok(vec![(width, height, argb_pixmap.clone())]);
             }
         }
 

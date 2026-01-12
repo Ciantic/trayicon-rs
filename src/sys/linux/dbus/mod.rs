@@ -1,8 +1,9 @@
 mod canonical_dbus_menu;
 mod status_notifier_item;
 mod status_notifier_watcher;
+use super::kdeicon::KdeIcon;
 pub use canonical_dbus_menu::*;
-pub use status_notifier_item::{IconData, StatusNotifierEvent, StatusNotifierItemImpl};
+pub use status_notifier_item::{StatusNotifierEvent, StatusNotifierItemImpl};
 pub use status_notifier_watcher::StatusNotifierWatcherProxy;
 use std::sync::{Arc, LazyLock, Mutex};
 use zbus::names::OwnedWellKnownName;
@@ -42,7 +43,7 @@ pub fn register_notifier_item_watcher_blocking(
     tooltip: String,
 ) -> (
     StatusNotifierWatcherProxy<'static>,
-    Arc<Mutex<IconData>>,
+    Arc<Mutex<KdeIcon>>,
     Arc<Mutex<String>>,
 ) {
     // Create the StatusNotifierWatcher proxy and register our item
@@ -51,8 +52,8 @@ pub fn register_notifier_item_watcher_blocking(
         let owned_name = OwnedWellKnownName::try_from(unique_name.clone()).unwrap();
         let _ = connection.request_name(owned_name).await;
 
-        let icon_data = Arc::new(Mutex::new(IconData {
-            buffer: icon_buffer,
+        let icon_data = Arc::new(Mutex::new(KdeIcon {
+            argb_pixels: icon_buffer,
             width: icon_width,
             height: icon_height,
         }));

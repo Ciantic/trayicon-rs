@@ -1,8 +1,9 @@
+use super::kdeicon::KdeIcon;
 use super::MenuSys;
 use crate::{
     sys::dbus::{
-        get_dbus_connection, register_notifier_item_watcher_blocking, IconData,
-        StatusNotifierEvent, StatusNotifierItemImpl,
+        get_dbus_connection, register_notifier_item_watcher_blocking, StatusNotifierEvent,
+        StatusNotifierItemImpl,
     },
     trayiconsender::TrayIconSender,
     Error, TrayIconBase, TrayIconEvent,
@@ -21,7 +22,7 @@ where
     #[allow(dead_code)]
     menu: Option<MenuSys<T>>,
     event_sender: Option<std::sync::mpsc::Sender<(i32, T)>>,
-    icon_data: Arc<Mutex<IconData>>,
+    icon_data: Arc<Mutex<KdeIcon>>,
     tooltip_data: Arc<Mutex<String>>,
     last_xdg_activation_token: Arc<Mutex<Option<String>>>,
     // notify_icon: WinNotifyIcon,
@@ -52,12 +53,7 @@ where
 
         // Extract icon data if available
         let (icon_buffer, icon_width, icon_height) = if let Some(icon) = icon {
-            // Use decoded RGBA pixels if available, otherwise fall back to raw buffer
-            let buffer = if let Some(ref rgba) = icon.sys.rgba_pixels {
-                Some(rgba.clone())
-            } else {
-                Some(icon.sys.buffer.to_vec())
-            };
+            let buffer = icon.sys.argb_pixels.clone();
             (buffer, icon.sys.width, icon.sys.height)
         } else {
             (None, 0, 0)
@@ -121,26 +117,9 @@ where
     T: TrayIconEvent,
 {
     fn set_icon(&mut self, kde_tray_icon: &crate::Icon) -> Result<(), Error> {
-        // Extract the new icon data
-        let (buffer, width, height) = if let Some(ref rgba) = kde_tray_icon.sys.rgba_pixels {
-            (
-                Some(rgba.clone()),
-                kde_tray_icon.sys.width,
-                kde_tray_icon.sys.height,
-            )
-        } else {
-            (
-                Some(kde_tray_icon.sys.buffer.to_vec()),
-                kde_tray_icon.sys.width,
-                kde_tray_icon.sys.height,
-            )
-        };
-
         // Update the shared icon data
         if let Ok(mut icon_data) = self.icon_data.lock() {
-            icon_data.buffer = buffer;
-            icon_data.width = width;
-            icon_data.height = height;
+            *icon_data = kde_tray_icon.clone().sys;
         }
 
         // Emit NewIcon signal to notify the tray that the icon changed
