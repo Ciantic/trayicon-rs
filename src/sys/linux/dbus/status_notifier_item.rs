@@ -97,14 +97,14 @@ impl StatusNotifierItemImpl {
     /// Category property
     #[zbus(property)]
     pub fn category(&self) -> zbus::fdo::Result<String> {
-        println!("category() called");
+        // println!("category() called");
         Ok(String::from("ApplicationStatus"))
     }
 
     /// IconName property
     #[zbus(property)]
     pub fn icon_name(&self) -> zbus::fdo::Result<String> {
-        println!("icon_name() called");
+        // println!("icon_name() called");
         // Return empty string so that icon_pixmap is used instead
         // If we return a theme icon name, it will be preferred over the pixmap
         if let Ok(icon_data) = self.icon_data.lock() {
@@ -118,7 +118,7 @@ impl StatusNotifierItemImpl {
     /// IconPixmap property
     #[zbus(property)]
     pub fn icon_pixmap(&self) -> zbus::fdo::Result<Vec<(i32, i32, Vec<u8>)>> {
-        println!("icon_pixmap() called");
+        // println!("icon_pixmap() called");
 
         // If we have icon data, use it
         if let Ok(icon_data) = self.icon_data.lock() {
@@ -168,7 +168,7 @@ impl StatusNotifierItemImpl {
     /// Id property
     #[zbus(property)]
     pub fn id(&self) -> zbus::fdo::Result<String> {
-        println!("id() called");
+        // println!("id() called");
         Ok(self.id.clone())
     }
 
@@ -203,7 +203,7 @@ impl StatusNotifierItemImpl {
     /// Status property
     #[zbus(property)]
     pub fn status(&self) -> zbus::fdo::Result<String> {
-        println!("status() called");
+        // println!("status() called");
         // Return "Active" by default, but this can be changed to "NeedsAttention" or "Passive"
         Ok(String::from("Active"))
     }

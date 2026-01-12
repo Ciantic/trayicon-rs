@@ -124,7 +124,7 @@ where
         _recursion_depth: i32,
         _property_names: Vec<String>,
     ) -> zbus::fdo::Result<(u32, Layout)> {
-        println!("get_layout called for parent_id {}", parent_id);
+        // println!("get_layout called for parent_id {}", parent_id);
 
         if parent_id == 0 {
             // Root menu
@@ -182,10 +182,11 @@ where
         _data: OwnedValue,
         _timestamp: u32,
     ) -> zbus::fdo::Result<()> {
-        println!(
-            "Event received for id {} event_id {} timestamp {}",
-            id, event_id, _timestamp
-        );
+        // println!(
+        //     "Event received for id {} event_id {} timestamp {}",
+        //     id, event_id, _timestamp
+        // );
+        // TODO: Event menu opened, closed, do we need those?
 
         // Handle clicked events
         if event_id == "clicked" {

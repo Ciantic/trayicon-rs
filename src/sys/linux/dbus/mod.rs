@@ -79,16 +79,22 @@ pub fn register_notifier_item_watcher_blocking(
             .await
             .unwrap();
 
-        println!("Connected to StatusNotifierWatcher");
+        // println!("Connected to StatusNotifierWatcher");
 
         // Check if there's a StatusNotifierHost registered
         match proxy.is_status_notifier_host_registered().await {
-            Ok(registered) => println!("StatusNotifierHost registered: {}", registered),
-            Err(e) => println!("Failed to check host registration: {:?}", e),
+            Ok(_registered) => {
+                //println!("StatusNotifierHost registered: {}", _registered)
+                ()
+            }
+            Err(e) => eprintln!("Failed to check host registration: {:?}", e),
         }
 
         match proxy.register_status_notifier_item(&unique_name).await {
-            Ok(_) => println!("Successfully registered as: {}", unique_name),
+            Ok(_) => {
+                // println!("Successfully registered as: {}", unique_name)
+                ()
+            }
             Err(e) => println!("Failed to register: {:?}", e),
         }
 
@@ -99,10 +105,10 @@ pub fn register_notifier_item_watcher_blocking(
             .interface::<_, StatusNotifierItemImpl>("/StatusNotifierItem")
             .await
         {
-            println!("Emitting NewIcon signal to notify tray of icon availability");
+            // println!("Emitting NewIcon signal to notify tray of icon availability");
             let emitter = obj.signal_emitter();
             if let Err(e) = StatusNotifierItemImpl::new_icon(&emitter).await {
-                println!("Failed to emit NewIcon signal: {:?}", e);
+                eprintln!("Failed to emit NewIcon signal: {:?}", e);
             }
         }
 
