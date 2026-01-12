@@ -30,6 +30,11 @@ cargo check --target x86_64-unknown-linux-gnu
 
 ## Change log
 
+- 0.4.0 - 2026-01-12
+
+  - KDE Support
+  - Backwards incompatible change: Event type must be also `Send + Sync`
+
 - 0.3.0 - 2025-07-18
 
   - Thanks to [@bearice](https://github.com/bearice) for MacOS support.
