@@ -4,13 +4,11 @@ Currently I target Windows tray icon implementation, with popup menu, click, dou
 
 [Open here a full working example with winit crate 🢅](https://github.com/Ciantic/trayicon-rs/blob/master/examples/winit/src/main.rs)
 
-## TODO
-
-Provide coordinates of the Tray Icon area for custom popups.
-
 ## Alternatives
 
 Most mature alternative is qdot's [systray-rs](https://github.com/qdot/systray-rs). Unfortunately I got frustrated with the API in it and decided to rewrite my own. This however largely does not use the code in it, instead I loaned my old C/C++ code repository as a template.
+
+KDE only [KSNI](https://github.com/iovxw/ksni)
 
 ## Development
 
@@ -34,6 +32,7 @@ cargo check --target x86_64-unknown-linux-gnu
 
   - KDE Support
   - Backwards incompatible change: Event type must be also `Send + Sync`
+  - On Windows right click defaults now to showing the context menu if no handler is set, like in KDE and MacOS.
 
 - 0.3.0 - 2025-07-18
 
@@ -43,3 +42,8 @@ cargo check --target x86_64-unknown-linux-gnu
 
   - Removed dependency to `winit` crate, now setting a sender is a function.
   - Added `show_menu`, this means user must call it to show the menu even on right click. Previously right click always showed the menu.
+
+## TODO
+
+- Provide coordinates of the Tray Icon area for custom popups.
+- Drop `winapi` library and use `windows` crate instead, or directly bind to C functions (this was previous behavior).
