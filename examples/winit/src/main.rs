@@ -12,9 +12,9 @@ enum UserEvents {
     RightClickTrayIcon,
     LeftClickTrayIcon,
     DoubleClickTrayIcon,
-    SetStatusActive,
-    SetStatusNeedsAttention,
-    SetStatusPassive,
+    StatusActive,
+    StatusNeedsAttention,
+    StatusPassive,
     Exit,
     Item1,
     Item2,
@@ -56,15 +56,9 @@ fn main() {
                 .submenu(
                     "Set Status (KDE only feature)",
                     MenuBuilder::new()
-                        .item("Set Status: Active (Normal)", UserEvents::SetStatusActive)
-                        .item(
-                            "Set Status: NeedsAttention (Blink)",
-                            UserEvents::SetStatusNeedsAttention,
-                        )
-                        .item(
-                            "Set Status: Passive (Hide behind arrow)",
-                            UserEvents::SetStatusPassive,
-                        ),
+                        .item("Active (Normal)", UserEvents::StatusActive)
+                        .item("NeedsAttention (Blink)", UserEvents::StatusNeedsAttention)
+                        .item("Passive (Hide behind arrow)", UserEvents::StatusPassive),
                 )
                 .separator()
                 .submenu(
@@ -185,15 +179,15 @@ impl ApplicationHandler<UserEvents> for MyApplication {
             UserEvents::Item4 => {
                 self.tray_icon.set_tooltip("Menu changed!").unwrap();
             }
-            UserEvents::SetStatusActive => {
+            UserEvents::StatusActive => {
                 self.tray_icon.set_status(TrayIconStatus::Active).unwrap();
             }
-            UserEvents::SetStatusNeedsAttention => {
+            UserEvents::StatusNeedsAttention => {
                 self.tray_icon
                     .set_status(TrayIconStatus::NeedsAttention)
                     .unwrap();
             }
-            UserEvents::SetStatusPassive => {
+            UserEvents::StatusPassive => {
                 self.tray_icon.set_status(TrayIconStatus::Passive).unwrap();
             }
             // Events::DoubleClickTrayIcon => todo!(),
