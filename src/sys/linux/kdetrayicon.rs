@@ -228,11 +228,6 @@ where
         Ok(())
     }
 
-    fn show_menu(&mut self) -> Result<(), Error> {
-        // With KDE, we can't just show the menu programmatically like on Windows and MacOS, it always opens with right click on the tray icon. Leaving this empty for now.
-        Ok(())
-    }
-
     fn set_status(&mut self, status: crate::TrayIconStatus) -> Result<(), Error> {
         use crate::TrayIconStatus;
 

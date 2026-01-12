@@ -67,9 +67,16 @@ where
     fn set_icon(&mut self, icon: &Icon) -> Result<(), Error>;
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;
     fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error>;
-    fn show_menu(&mut self) -> Result<(), Error>;
 
-    /// Set the status of the tray icon.
+    /// Show the menu (Windows only)
+    ///
+    /// On KDE and MacOS right click by default opens the menu, there is no programmatic way to open it.
+    fn show_menu(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    /// Set the status of the tray icon (KDE only)
+    ///
     /// On KDE, this controls the StatusNotifierItem status:
     /// - Active: Normal visible state
     /// - NeedsAttention: Icon blinks/animates to draw attention
@@ -80,8 +87,7 @@ where
         Ok(())
     }
 
-    /// KDE specific: Get the XDG activation token provided by the system tray
-    /// when the user clicks the tray icon.
+    /// Get the XDG activation token (KDE only)
     fn get_xdg_activation_token(&self) -> Option<String> {
         None
     }
