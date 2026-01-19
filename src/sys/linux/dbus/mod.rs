@@ -41,9 +41,11 @@ pub fn register_notifier_item_watcher_blocking(
     icon_width: u32,
     icon_height: u32,
     tooltip: String,
+    title: String,
 ) -> (
     StatusNotifierWatcherProxy<'static>,
     Arc<Mutex<KdeIcon>>,
+    Arc<Mutex<String>>,
     Arc<Mutex<String>>,
 ) {
     // Create the StatusNotifierWatcher proxy and register our item
@@ -59,12 +61,14 @@ pub fn register_notifier_item_watcher_blocking(
         }));
 
         let tooltip_data = Arc::new(Mutex::new(tooltip));
+        let title_data = Arc::new(Mutex::new(title));
 
         let status_notifier_item = StatusNotifierItemImpl {
             id: unique_name.clone(),
             channel_sender,
             icon_data: icon_data.clone(),
             tooltip: tooltip_data.clone(),
+            title: title_data.clone(),
         };
         let _ = connection
             .object_server()
@@ -113,6 +117,6 @@ pub fn register_notifier_item_watcher_blocking(
             }
         }
 
-        (proxy, icon_data, tooltip_data)
+        (proxy, icon_data, tooltip_data, title_data)
     });
 }

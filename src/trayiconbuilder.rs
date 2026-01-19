@@ -35,6 +35,7 @@ where
 {
     pub(crate) icon: Result<Icon, Error>,
     pub(crate) menu: Option<MenuBuilder<T>>,
+    pub(crate) title: Option<String>,
     pub(crate) tooltip: Option<String>,
     pub(crate) on_click: Option<T>,
     pub(crate) on_double_click: Option<T>,
@@ -51,6 +52,7 @@ where
         TrayIconBuilder {
             icon: Err(Error::IconMissing),
             menu: None,
+            title: None,
             tooltip: None,
             on_click: None,
             on_double_click: None,
@@ -69,6 +71,14 @@ where
 
     pub fn sender(mut self, cb: impl Fn(&T) + Send + Sync + 'static) -> Self {
         self.sender = Some(TrayIconSender::new(cb));
+        self
+    }
+
+    /// Set title (KDE only)
+    ///
+    /// Used in KDE as the application title for the tray icon.
+    pub fn title(mut self, title: &str) -> Self {
+        self.title = Some(title.to_string());
         self
     }
 

@@ -42,6 +42,7 @@ fn main() {
             let _ = proxy.send_event(e.clone());
         })
         .icon_from_buffer(icon)
+        .title("Cool Tray Icon App (KDE Title)")
         .tooltip("Cool Tray 👀 Icon")
         // Binding `on_click`, `on_double_click` and `on_right_click` is optional, if not bound it will still open the menu on right click (all platforms) and left click (MacOS).
         .on_click(UserEvents::LeftClickTrayIcon)

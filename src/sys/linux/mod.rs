@@ -47,6 +47,10 @@ where
 {
     let mut menu: Option<MenuSys<T>> = None;
     let tooltip = builder.tooltip.clone().unwrap_or_default();
+    let title = builder
+        .title
+        .clone()
+        .unwrap_or_else(|| "Application".to_string());
     let icon = builder.icon.as_ref()?;
     let on_click = builder.on_click.clone();
     let on_right_click = builder.on_right_click.clone();
@@ -84,6 +88,7 @@ where
         menu,
         Some(icon),
         tooltip,
+        title,
         // notify_icon,
         on_click,
         on_double_click,

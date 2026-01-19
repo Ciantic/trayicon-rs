@@ -24,6 +24,7 @@ where
     event_sender: Option<std::sync::mpsc::Sender<(i32, T)>>,
     icon_data: Arc<Mutex<KdeIcon>>,
     tooltip_data: Arc<Mutex<String>>,
+    title_data: Arc<Mutex<String>>,
     last_xdg_activation_token: Arc<Mutex<Option<String>>>,
     // notify_icon: WinNotifyIcon,
     // on_click: Option<T>,
@@ -43,6 +44,7 @@ where
         menu: Option<MenuSys<T>>,
         icon: Option<&crate::Icon>,
         tooltip: String,
+        title: String,
         // notify_icon: WinNotifyIcon,
         on_click: Option<T>,
         _on_double_click: Option<T>,
@@ -59,14 +61,16 @@ where
             (None, 0, 0)
         };
 
-        let (_, icon_data_ref, tooltip_data_ref) = register_notifier_item_watcher_blocking(
-            connection,
-            sender.clone(),
-            icon_buffer,
-            icon_width,
-            icon_height,
-            tooltip,
-        );
+        let (_, icon_data_ref, tooltip_data_ref, title_data_ref) =
+            register_notifier_item_watcher_blocking(
+                connection,
+                sender.clone(),
+                icon_buffer,
+                icon_width,
+                icon_height,
+                tooltip,
+                title,
+            );
 
         // Store the event_sender if menu exists
         let event_sender = menu.as_ref().and_then(|m| m.event_sender.clone());
@@ -103,6 +107,7 @@ where
             event_sender,
             icon_data: icon_data_ref,
             tooltip_data: tooltip_data_ref,
+            title_data: title_data_ref,
             last_xdg_activation_token,
             // notify_icon,
             // on_click,
@@ -201,6 +206,28 @@ where
             {
                 let emitter = obj.signal_emitter();
                 let _ = StatusNotifierItemImpl::new_tool_tip(&emitter).await;
+            }
+        });
+
+        Ok(())
+    }
+
+    fn set_title(&mut self, title: &str) -> Result<(), Error> {
+        // Update the title data
+        if let Ok(mut title_data) = self.title_data.lock() {
+            *title_data = title.to_string();
+        }
+
+        // Emit the NewTitle signal to notify the system tray
+        let connection = get_dbus_connection();
+        futures::executor::block_on(async {
+            if let Ok(obj) = connection
+                .object_server()
+                .interface::<_, StatusNotifierItemImpl>("/StatusNotifierItem")
+                .await
+            {
+                let emitter = obj.signal_emitter();
+                let _ = StatusNotifierItemImpl::new_title(&emitter).await;
             }
         });
 

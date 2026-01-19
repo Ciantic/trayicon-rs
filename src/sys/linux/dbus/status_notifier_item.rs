@@ -24,6 +24,7 @@ pub struct StatusNotifierItemImpl {
     pub channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
     pub icon_data: Arc<Mutex<KdeIcon>>,
     pub tooltip: Arc<Mutex<String>>,
+    pub title: Arc<Mutex<String>>,
 }
 
 #[interface(name = "org.kde.StatusNotifierItem")]
@@ -194,7 +195,8 @@ impl StatusNotifierItemImpl {
     /// Title property
     #[zbus(property)]
     pub fn title(&self) -> zbus::fdo::Result<String> {
-        Ok(String::from("Example App"))
+        let title = self.title.lock().unwrap().clone();
+        Ok(title)
     }
 
     /// ToolTip property

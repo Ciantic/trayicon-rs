@@ -50,6 +50,18 @@ where
         self.sys.set_tooltip(tooltip)
     }
 
+    /// Set the title (KDE only)
+    ///
+    /// Used in KDE as the application title for the tray icon (Title property).
+    /// On other platforms, this does nothing.
+    pub fn set_title(&mut self, title: &str) -> Result<(), Error> {
+        if self.builder.title.as_deref() == Some(title) {
+            return Ok(());
+        }
+        self.builder.title = Some(title.to_string());
+        self.sys.set_title(title)
+    }
+
     /// Set disabled
     ///
     /// Prefer building a new menu if application state changes instead of

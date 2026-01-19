@@ -68,6 +68,14 @@ where
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error>;
     fn set_tooltip(&mut self, tooltip: &str) -> Result<(), Error>;
 
+    /// Set title (KDE only)
+    ///
+    /// Used in KDE as the application title for the tray icon (Title property).
+    /// On other platforms, this does nothing by default.
+    fn set_title(&mut self, _title: &str) -> Result<(), Error> {
+        Ok(())
+    }
+
     /// Show the menu (Windows only)
     ///
     /// On KDE and MacOS right click by default opens the menu, there is no programmatic way to open it.
