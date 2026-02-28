@@ -49,6 +49,7 @@ where
         on_click: Option<T>,
         _on_double_click: Option<T>,
         _on_right_click: Option<T>,
+        item_is_menu: bool,
     ) -> Result<KdeTrayIconImpl<T>, Error> {
         let connection = get_dbus_connection();
         let (sender, receiver) = std::sync::mpsc::channel();
@@ -70,6 +71,7 @@ where
                 icon_height,
                 tooltip,
                 title,
+                item_is_menu,
             );
 
         // Store the event_sender if menu exists

@@ -42,6 +42,7 @@ pub fn register_notifier_item_watcher_blocking(
     icon_height: u32,
     tooltip: String,
     title: String,
+    item_is_menu: bool,
 ) -> (
     StatusNotifierWatcherProxy<'static>,
     Arc<Mutex<KdeIcon>>,
@@ -69,6 +70,7 @@ pub fn register_notifier_item_watcher_blocking(
             icon_data: icon_data.clone(),
             tooltip: tooltip_data.clone(),
             title: title_data.clone(),
+            item_is_menu,
         };
         let _ = connection
             .object_server()

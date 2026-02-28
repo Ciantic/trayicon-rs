@@ -56,6 +56,7 @@ where
     let on_right_click = builder.on_right_click.clone();
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
     let on_double_click = builder.on_double_click.clone();
+    let item_is_menu = builder.item_is_menu.clone();
     // let notify_icon = WinNotifyIcon::new(hicon, tooltip);
 
     // Try to get a popup menu
@@ -93,6 +94,7 @@ where
         on_click,
         on_double_click,
         on_right_click,
+        item_is_menu,
     )?)
 }
 

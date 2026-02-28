@@ -103,7 +103,8 @@ where
 
     /// Show the menu (Windows only)
     ///
-    /// On KDE and MacOS right click by default opens the menu, there is no programmatic way to open it.
+    /// On KDE and MacOS right click by default opens the menu, there is no programmatic way to open it.  
+    /// On KDE, see [item_is_menu](crate::trayiconbuilder::TrayIconBuilder::item_is_menu) as a workaround
     pub fn show_menu(&mut self) -> Result<(), Error> {
         self.sys.show_menu()
     }

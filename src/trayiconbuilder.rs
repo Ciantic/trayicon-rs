@@ -40,6 +40,7 @@ where
     pub(crate) on_click: Option<T>,
     pub(crate) on_double_click: Option<T>,
     pub(crate) on_right_click: Option<T>,
+    pub(crate) item_is_menu: bool,
     pub(crate) sender: Option<TrayIconSender<T>>,
 }
 
@@ -57,6 +58,7 @@ where
             on_click: None,
             on_double_click: None,
             on_right_click: None,
+            item_is_menu: false,
             sender: None,
         }
     }
@@ -133,5 +135,13 @@ where
 
     pub fn build(self) -> Result<TrayIcon<T>, Error> {
         Ok(TrayIcon::new(crate::build_trayicon(&self)?, self))
+    }
+
+    /// Indicates that this item only supports the context menu. 
+    ///
+    /// Set this to true if you want to be able to open the context menu with left click. KDE only
+    pub fn item_is_menu(mut self, value: bool) -> Self {
+        self.item_is_menu = value;
+        self
     }
 }

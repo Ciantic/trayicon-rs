@@ -25,6 +25,7 @@ pub struct StatusNotifierItemImpl {
     pub icon_data: Arc<Mutex<KdeIcon>>,
     pub tooltip: Arc<Mutex<String>>,
     pub title: Arc<Mutex<String>>,
+    pub item_is_menu: bool,
 }
 
 #[interface(name = "org.kde.StatusNotifierItem")]
@@ -159,7 +160,7 @@ impl StatusNotifierItemImpl {
     /// ItemIsMenu property
     #[zbus(property)]
     pub fn item_is_menu(&self) -> zbus::fdo::Result<bool> {
-        Ok(false)
+        Ok(self.item_is_menu)
     }
 
     /// Menu property
