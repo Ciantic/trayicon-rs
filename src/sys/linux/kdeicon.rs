@@ -11,7 +11,7 @@ pub struct KdeIcon {
 
 impl IconBase for KdeIcon {
     fn from_buffer(
-        buffer: &'static [u8],
+        buffer: std::borrow::Cow<'static, [u8]>,
         _width: Option<u32>,
         _height: Option<u32>,
     ) -> Result<KdeIcon, Error> {

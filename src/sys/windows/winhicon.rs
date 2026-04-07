@@ -11,7 +11,7 @@ pub struct WinHIcon {
 
 impl IconBase for WinHIcon {
     fn from_buffer(
-        buffer: &'static [u8],
+        buffer: std::borrow::Cow<'static, [u8]>,
         width: Option<u32>,
         height: Option<u32>,
     ) -> Result<WinHIcon, Error> {

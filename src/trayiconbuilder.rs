@@ -118,7 +118,7 @@ where
         self
     }
 
-    pub fn icon_from_buffer(mut self, buffer: &'static [u8]) -> Self {
+    pub fn icon_from_buffer(mut self, buffer: std::borrow::Cow<'static, [u8]>) -> Self {
         self.icon = Icon::from_buffer(buffer, None, None);
         self
     }
