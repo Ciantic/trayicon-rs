@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 #[derive(Clone)]
 pub struct Icon {
-    buffer: Option<&'static [u8]>,
+    buffer: Option<std::borrow::Cow<'static, [u8]>>,
     pub(crate) sys: crate::IconSys,
 }
 
@@ -15,12 +15,12 @@ impl Debug for Icon {
 
 impl Icon {
     pub fn from_buffer(
-        buffer: &'static [u8],
+        buffer: std::borrow::Cow<'static, [u8]>,
         width: Option<u32>,
         height: Option<u32>,
     ) -> Result<Icon, Error> {
         Ok(Icon {
-            buffer: Some(buffer),
+            buffer: Some(buffer.clone()),
             sys: crate::IconSys::from_buffer(buffer, width, height)?,
         })
     }

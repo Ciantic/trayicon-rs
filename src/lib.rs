@@ -104,7 +104,7 @@ where
 /// IconSys must implement this
 pub(crate) trait IconBase {
     fn from_buffer(
-        buffer: &'static [u8],
+        buffer: std::borrow::Cow<'static, [u8]>,
         width: Option<u32>,
         height: Option<u32>,
     ) -> Result<IconSys, Error>;
