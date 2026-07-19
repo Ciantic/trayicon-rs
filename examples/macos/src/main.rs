@@ -17,9 +17,21 @@ enum Events {
     SubItem1,
     SubItem2,
     SubItem3,
+    // Mutually-exclusive radio options. Two independent groups live in one
+    // submenu, split by a separator — each group is exclusive within itself.
+    RadioRed,
+    RadioGreen,
+    RadioBlue,
+    RadioCircle,
+    RadioSquare,
+    RadioTriangle,
 }
 
-fn build_menu(checked: bool) -> MenuBuilder<Events> {
+fn build_menu(
+    checked: bool,
+    selected_color: Events,
+    selected_shape: Events,
+) -> MenuBuilder<Events> {
     MenuBuilder::new()
         .item("Item 1", Events::Item1)
         .item("Item 2", Events::Item2)
@@ -31,6 +43,42 @@ fn build_menu(checked: bool) -> MenuBuilder<Events> {
                 .item("Sub Item 1", Events::SubItem1)
                 .item("Sub Item 2", Events::SubItem2)
                 .item("Sub Item 3", Events::SubItem3),
+        )
+        // Two radio groups in a single submenu. macOS has no native radio menu
+        // item, so they render as checkmarks; the app keeps each group exclusive
+        // by rebuilding with only the selected option checked. The `separator`
+        // splits the six items into two independent groups (color and shape);
+        // without it they would all share one selection.
+        .submenu(
+            "Radio Groups",
+            MenuBuilder::new()
+                .radio("Red", selected_color == Events::RadioRed, Events::RadioRed)
+                .radio(
+                    "Green",
+                    selected_color == Events::RadioGreen,
+                    Events::RadioGreen,
+                )
+                .radio(
+                    "Blue",
+                    selected_color == Events::RadioBlue,
+                    Events::RadioBlue,
+                )
+                .separator()
+                .radio(
+                    "Circle",
+                    selected_shape == Events::RadioCircle,
+                    Events::RadioCircle,
+                )
+                .radio(
+                    "Square",
+                    selected_shape == Events::RadioSquare,
+                    Events::RadioSquare,
+                )
+                .radio(
+                    "Triangle",
+                    selected_shape == Events::RadioTriangle,
+                    Events::RadioTriangle,
+                ),
         )
         .separator()
         .item("Exit", Events::Exit)
@@ -50,6 +98,8 @@ fn main() {
     app.setActivationPolicy(NSApplicationActivationPolicy::Accessory);
 
     let mut checked = true; // Initial state for the checkable item
+    let mut selected_color = Events::RadioRed; // Currently-selected color radio
+    let mut selected_shape = Events::RadioCircle; // Currently-selected shape radio
 
     // Needlessly complicated tray icon with all the whistles and bells
     let mut tray_icon = TrayIconBuilder::new()
@@ -61,7 +111,7 @@ fn main() {
         .on_right_click(Events::RightClickTrayIcon)
         .on_click(Events::LeftClickTrayIcon)
         .on_double_click(Events::DoubleClickTrayIcon)
-        .menu(build_menu(checked))
+        .menu(build_menu(checked, selected_color, selected_shape))
         .build()
         .unwrap();
 
@@ -96,11 +146,32 @@ fn main() {
                     .unwrap();
             }
             Events::Item4 => {
-                tray_icon.set_menu(&build_menu(checked)).unwrap();
+                tray_icon
+                    .set_menu(&build_menu(checked, selected_color, selected_shape))
+                    .unwrap();
             }
             Events::CheckItem1 => {
                 checked = !checked;
-                tray_icon.set_menu(&build_menu(checked)).unwrap();
+                tray_icon
+                    .set_menu(&build_menu(checked, selected_color, selected_shape))
+                    .unwrap();
+            }
+            // Selecting a color radio rebuilds the menu so only that color option
+            // is checked; the shape group keeps its own selection.
+            Events::RadioRed | Events::RadioGreen | Events::RadioBlue => {
+                selected_color = m;
+                tray_icon
+                    .set_menu(&build_menu(checked, selected_color, selected_shape))
+                    .unwrap();
+                println!("Color selected: {:?}", m);
+            }
+            // Selecting a shape radio — independent of the color group.
+            Events::RadioCircle | Events::RadioSquare | Events::RadioTriangle => {
+                selected_shape = m;
+                tray_icon
+                    .set_menu(&build_menu(checked, selected_color, selected_shape))
+                    .unwrap();
+                println!("Shape selected: {:?}", m);
             }
             e => {
                 println!("{:?}", e);

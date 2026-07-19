@@ -26,6 +26,7 @@ where
     tooltip_data: Arc<Mutex<String>>,
     title_data: Arc<Mutex<String>>,
     last_xdg_activation_token: Arc<Mutex<Option<String>>>,
+    menu_state: crate::SharedMenu<T>,
     // notify_icon: WinNotifyIcon,
     // on_click: Option<T>,
     // on_double_click: Option<T>,
@@ -50,6 +51,7 @@ where
         _on_double_click: Option<T>,
         _on_right_click: Option<T>,
         item_is_menu: bool,
+        menu_state: crate::SharedMenu<T>,
     ) -> Result<KdeTrayIconImpl<T>, Error> {
         let connection = get_dbus_connection();
         let (sender, receiver) = std::sync::mpsc::channel();
@@ -111,6 +113,7 @@ where
             tooltip_data: tooltip_data_ref,
             title_data: title_data_ref,
             last_xdg_activation_token,
+            menu_state,
             // notify_icon,
             // on_click,
             // on_double_click,
@@ -162,29 +165,42 @@ where
         // Replace the menu at /MenuBar with the new menu
         futures::executor::block_on(async {
             // Remove old menu
-            let _ = connection
+            connection
                 .object_server()
                 .remove::<crate::sys::dbus::DbusMenu<T>, _>("/MenuBar")
-                .await;
+                .await
+                .map_err(|_| Error::OsError)?;
 
             // Register new menu
-            let dbus_menu = crate::sys::dbus::DbusMenu::new(built_menu.clone());
-            let _ = connection
+            let dbus_menu =
+                crate::sys::dbus::DbusMenu::new(built_menu.clone(), self.menu_state.clone());
+            connection
                 .object_server()
                 .at("/MenuBar", dbus_menu)
                 .await
-                .unwrap();
+                .map_err(|_| Error::OsError)?;
 
-            // Get the interface and emit layout_updated signal
-            if let Ok(iface) = connection
+            // Get the interface and emit layout_updated signal. The revision
+            // must be strictly increasing or KDE's tray applet (which caches
+            // the last fetched revision) will silently ignore the update and
+            // the rebuilt menu — including corrected checkable / radio
+            // toggle-state — never reaches the UI.
+            let iface = connection
                 .object_server()
                 .interface::<_, crate::sys::dbus::DbusMenu<T>>("/MenuBar")
                 .await
-            {
-                let emitter = iface.signal_emitter();
-                let _ = crate::sys::dbus::DbusMenu::<T>::layout_updated(&emitter, 0, 0).await;
-            }
-        });
+                .map_err(|_| Error::OsError)?;
+            let emitter = iface.signal_emitter();
+            crate::sys::dbus::DbusMenu::<T>::layout_updated(
+                emitter,
+                crate::sys::dbus::next_layout_revision(),
+                0,
+            )
+            .await
+            .map_err(|_| Error::OsError)?;
+
+            Ok::<(), Error>(())
+        })?;
 
         // Store the new menu
         self.menu = Some(built_menu);

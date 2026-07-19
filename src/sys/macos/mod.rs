@@ -21,11 +21,14 @@ where
 }
 
 /// Build the tray icon
-pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<TrayIconSys<T>, Error>
+pub fn build_trayicon<T>(
+    builder: &TrayIconBuilder<T>,
+    menu_state: crate::SharedMenu<T>,
+) -> Result<TrayIconSys<T>, Error>
 where
     T: TrayIconEvent,
 {
-    trayicon::build_trayicon(builder)
+    trayicon::build_trayicon(builder, menu_state)
 }
 
 #[allow(dead_code)]
@@ -36,7 +39,8 @@ where
 {
     // Create a dummy sender for menu building - real sender will be attached later
     let dummy_sender = crate::trayiconsender::TrayIconSender::new(|_| {});
-    let mac_menu = menu::build_menu(builder, &dummy_sender)?;
+    let menu_state = std::sync::Arc::new(std::sync::RwLock::new(Some(builder.clone())));
+    let mac_menu = menu::build_menu(builder, &dummy_sender, menu_state)?;
     Ok(MenuSys {
         ids: mac_menu.ids.clone(),
         menu: mac_menu,

@@ -23,6 +23,7 @@ where
     on_double_click: Option<T>,
     #[allow(dead_code)]
     on_right_click: Option<T>,
+    menu_state: crate::SharedMenu<T>,
 }
 
 impl<T> TrayIconBase<T> for MacTrayIcon<T>
@@ -40,13 +41,11 @@ where
     }
 
     fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error> {
-        let mut menu_sys = build_menu(menu, &self.sender)?;
+        let mut menu_sys = build_menu(menu, &self.sender, self.menu_state.clone())?;
         menu_sys.update_sender(&self.sender);
         self.menu = Some(menu_sys);
         if let Some(ref menu_sys) = self.menu {
-            unsafe {
-                self.status_item.setMenu(Some(&menu_sys.menu));
-            }
+            self.status_item.setMenu(Some(&menu_sys.menu));
         }
         Ok(())
     }
@@ -64,9 +63,7 @@ where
 
     fn show_menu(&mut self) -> Result<(), Error> {
         if let Some(ref menu_sys) = self.menu {
-            unsafe {
-                self.status_item.setMenu(Some(&menu_sys.menu));
-            }
+            self.status_item.setMenu(Some(&menu_sys.menu));
         }
         Ok(())
     }
@@ -77,10 +74,8 @@ where
     T: TrayIconEvent,
 {
     fn drop(&mut self) {
-        unsafe {
-            let status_bar = NSStatusBar::systemStatusBar();
-            status_bar.removeStatusItem(&self.status_item);
-        }
+        let status_bar = NSStatusBar::systemStatusBar();
+        status_bar.removeStatusItem(&self.status_item);
     }
 }
 
@@ -88,7 +83,10 @@ unsafe impl<T> Send for MacTrayIcon<T> where T: TrayIconEvent {}
 unsafe impl<T> Sync for MacTrayIcon<T> where T: TrayIconEvent {}
 
 /// Build the tray icon
-pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<MacTrayIcon<T>, Error>
+pub fn build_trayicon<T>(
+    builder: &TrayIconBuilder<T>,
+    menu_state: crate::SharedMenu<T>,
+) -> Result<MacTrayIcon<T>, Error>
 where
     T: TrayIconEvent,
 {
@@ -100,8 +98,9 @@ where
     let on_right_click = builder.on_right_click.clone();
 
     let mut menu: Option<MacMenu<T>> = None;
-    if let Some(ref menu_builder) = builder.menu {
-        let mut menu_sys = build_menu(menu_builder, sender)?;
+    let initial_menu = menu_state.read().map_err(|_| Error::OsError)?.clone();
+    if let Some(ref menu_builder) = initial_menu {
+        let mut menu_sys = build_menu(menu_builder, sender, menu_state.clone())?;
         menu_sys.update_sender(sender);
         menu = Some(menu_sys);
     }
@@ -128,6 +127,7 @@ where
             on_click,
             on_double_click,
             on_right_click,
+            menu_state,
         })
     }
 }

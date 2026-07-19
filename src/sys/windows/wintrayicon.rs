@@ -70,6 +70,7 @@ where
     on_click: Option<T>,
     on_double_click: Option<T>,
     on_right_click: Option<T>,
+    menu_state: crate::SharedMenu<T>,
     msg_taskbarcreated: Option<UINT>,
 }
 
@@ -89,6 +90,7 @@ where
         on_click: Option<T>,
         on_double_click: Option<T>,
         on_right_click: Option<T>,
+        menu_state: crate::SharedMenu<T>,
     ) -> Result<WinTrayIcon<T>, Error>
     where
         T: PartialEq + Clone + 'static,
@@ -119,6 +121,7 @@ where
                 on_right_click,
                 on_double_click,
                 sender,
+                menu_state,
                 msg_taskbarcreated: None,
             });
             let ptr = Box::into_raw(window);
@@ -218,8 +221,31 @@ where
                 // Menu command
                 if cmd == 0 {
                     if let Some(v) = self.menu.as_ref() {
-                        if let Some(event) = v.ids.get(&(identifier as usize)) {
-                            self.sender.send(event);
+                        let event = v.ids.get(&(identifier as usize)).cloned();
+                        let radio_group = v.radio.get(&(identifier as usize)).copied();
+
+                        if let Some(group) = radio_group {
+                            unsafe {
+                                winuser::CheckMenuRadioItem(
+                                    group.hmenu as HMENU,
+                                    group.first,
+                                    group.last,
+                                    identifier as u32,
+                                    winuser::MF_BYCOMMAND,
+                                );
+                            }
+
+                            if let Some(event) = event.as_ref() {
+                                if let Ok(mut menu) = self.menu_state.write() {
+                                    if let Some(menu) = menu.as_mut() {
+                                        let _ = menu.select_radio(event);
+                                    }
+                                }
+                            }
+                        }
+
+                        if let Some(event) = event {
+                            self.sender.send(&event);
                         }
                     }
                 }

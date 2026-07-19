@@ -19,11 +19,29 @@ impl From<&Error> for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
+        let message = match self {
+            Error::MenuItemNotFound => "menu item not found",
+            Error::IconLoadingFailed => "icon loading failed",
+            Error::SenderMissing => "event sender missing",
+            Error::IconMissing => "icon missing",
+            Error::OsError => "operating system error",
+        };
+        f.write_str(message)
     }
 }
 
 impl std::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+
+    #[test]
+    fn error_display_is_non_recursive() {
+        assert_eq!(Error::MenuItemNotFound.to_string(), "menu item not found");
+        assert_eq!(Error::OsError.to_string(), "operating system error");
+    }
+}
 
 /// Tray Icon builder
 ///
@@ -133,11 +151,14 @@ where
         self
     }
 
-    pub fn build(self) -> Result<TrayIcon<T>, Error> {
-        Ok(TrayIcon::new(crate::build_trayicon(&self)?, self))
+    pub fn build(mut self) -> Result<TrayIcon<T>, Error> {
+        let menu = std::sync::Arc::new(std::sync::RwLock::new(self.menu.clone()));
+        let sys = crate::build_trayicon(&self, menu.clone())?;
+        self.menu = None;
+        Ok(TrayIcon::new(sys, self, menu))
     }
 
-    /// Indicates that this item only supports the context menu. 
+    /// Indicates that this item only supports the context menu.
     ///
     /// Set this to true if you want to be able to open the context menu with left click. KDE only
     pub fn item_is_menu(mut self, value: bool) -> Self {

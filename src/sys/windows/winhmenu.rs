@@ -63,6 +63,52 @@ impl WinHMenu {
         let res = unsafe { winuser::AppendMenuW(self.hmenu, flags, id, wchar(name).as_ptr() as _) };
         res >= 0
     }
+
+    /// Add a mutually-exclusive radio item.
+    ///
+    /// Uses `MFT_RADIOCHECK` so the item is rendered with a radio-button
+    /// glyph instead of a checkmark. Exclusivity within a group of consecutive
+    /// radio items is enforced natively on selection via `CheckMenuRadioItem`
+    /// (see `MenuSys`), so applications do not have to rebuild the menu to keep
+    /// a single selection per group.
+    pub fn add_radio_item(&self, name: &str, is_checked: bool, id: usize, disabled: bool) -> bool {
+        let label = wchar(name);
+
+        // MFS_ENABLED / MFT_STRING are zero, so we only set the flags that
+        // actually carry a bit and rely on the zero-initialized rest for the
+        // defaults (enabled, string item).
+        let mut state = if is_checked {
+            winuser::MFS_CHECKED
+        } else {
+            winuser::MFS_UNCHECKED
+        };
+        if disabled {
+            state |= winuser::MFS_GRAYED;
+        }
+
+        let mut info: winuser::MENUITEMINFOW = unsafe { std::mem::zeroed() };
+        info.cbSize = std::mem::size_of::<winuser::MENUITEMINFOW>() as u32;
+        info.fMask =
+            winuser::MIIM_FTYPE | winuser::MIIM_STATE | winuser::MIIM_ID | winuser::MIIM_STRING;
+        info.fType = winuser::MFT_RADIOCHECK;
+        info.fState = state;
+        info.wID = id as u32;
+        info.dwTypeData = label.as_ptr() as *mut u16;
+        info.cch = label.len() as u32 - 1; // exclude the null terminator
+
+        // Append at the end: position is the current item count, which we
+        // read with MF_BYPOSITION semantics.
+        let res = unsafe {
+            let count = winuser::GetMenuItemCount(self.hmenu);
+            winuser::InsertMenuItemW(
+                self.hmenu,
+                count as u32,
+                1, // TRUE -> by position
+                &info,
+            )
+        };
+        res != 0
+    }
     pub fn add_child_menu(&mut self, name: &str, menu: WinHMenu, disabled: bool) -> bool {
         let mut flags = winuser::MF_POPUP;
         if disabled {
@@ -87,6 +133,12 @@ impl WinHMenu {
 
     pub fn track(&self, hwnd: HWND, x: i32, y: i32) {
         unsafe { winuser::TrackPopupMenu(self.hmenu, 0, x, y, 0, hwnd, std::ptr::null_mut()) };
+    }
+
+    /// The underlying `HMENU` handle, for use with menu APIs such as
+    /// `CheckMenuRadioItem` that need to operate on a specific (sub)menu.
+    pub(crate) fn handle(&self) -> HMENU {
+        self.hmenu
     }
 }
 

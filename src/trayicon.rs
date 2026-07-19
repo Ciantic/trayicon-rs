@@ -8,14 +8,19 @@ where
 {
     sys: crate::TrayIconSys<T>,
     builder: TrayIconBuilder<T>,
+    menu: crate::SharedMenu<T>,
 }
 
 impl<T> TrayIcon<T>
 where
     T: TrayIconEvent,
 {
-    pub(crate) fn new(sys: crate::TrayIconSys<T>, builder: TrayIconBuilder<T>) -> TrayIcon<T> {
-        TrayIcon { builder, sys }
+    pub(crate) fn new(
+        sys: crate::TrayIconSys<T>,
+        builder: TrayIconBuilder<T>,
+        menu: crate::SharedMenu<T>,
+    ) -> TrayIcon<T> {
+        TrayIcon { builder, menu, sys }
     }
 
     /// Set the icon if changed
@@ -34,11 +39,7 @@ where
     /// using more imperative `set_item_checkable`, `get_item_checkable` and
     /// `set_item_disabled` methods.
     pub fn set_menu(&mut self, menu: &MenuBuilder<T>) -> Result<(), Error> {
-        if self.builder.menu.as_ref() == Some(menu) {
-            return Ok(());
-        }
-        self.builder.menu = Some(menu.clone());
-        self.sys.set_menu(menu)
+        self.replace_menu(menu.clone())
     }
 
     /// Set the tooltip if changed
@@ -68,11 +69,9 @@ where
     /// mutating a menu with this method. Suggestion is to use just `set_menu`
     /// method instead of this.
     pub fn set_menu_item_disabled(&mut self, id: T, disabled: bool) -> Result<(), Error> {
-        if let Some(menu) = self.builder.menu.as_mut() {
-            let _ = menu.set_disabled(id, disabled);
-            let _ = self.sys.set_menu(menu);
-        }
-        Ok(())
+        let mut menu = self.current_menu()?;
+        menu.set_disabled(&id, disabled)?;
+        self.replace_menu(menu)
     }
 
     /// Set checkable
@@ -81,11 +80,9 @@ where
     /// mutating a menu with this method.  Suggestion is to use just `set_menu`
     /// method instead of this.
     pub fn set_menu_item_checkable(&mut self, id: T, checked: bool) -> Result<(), Error> {
-        if let Some(menu) = self.builder.menu.as_mut() {
-            let _ = menu.set_checkable(id, checked);
-            let _ = self.sys.set_menu(menu);
-        }
-        Ok(())
+        let mut menu = self.current_menu()?;
+        menu.set_checkable(&id, checked)?;
+        self.replace_menu(menu)
     }
 
     /// Get checkable state
@@ -93,12 +90,11 @@ where
     /// Prefer maintaining proper application state instead of getting checkable
     /// state with this method. Suggestion is to use just `set_menu` method
     /// instead of this.
-    pub fn get_menu_item_checkable(&mut self, id: T) -> Option<bool> {
-        if let Some(menu) = self.builder.menu.as_mut() {
-            menu.get_checkable(id)
-        } else {
-            None
-        }
+    pub fn get_menu_item_checkable(&self, id: T) -> Option<bool> {
+        self.menu
+            .read()
+            .ok()
+            .and_then(|menu| menu.as_ref().and_then(|menu| menu.get_checkable(&id)))
     }
 
     /// Show the menu (Windows only)
@@ -128,6 +124,35 @@ where
     /// Get the XDG activation token (KDE only)
     pub fn get_xdg_activation_token(&self) -> Option<String> {
         self.sys.get_xdg_activation_token()
+    }
+
+    fn current_menu(&self) -> Result<MenuBuilder<T>, Error> {
+        self.menu
+            .read()
+            .map_err(|_| Error::OsError)?
+            .clone()
+            .ok_or(Error::MenuItemNotFound)
+    }
+
+    fn replace_menu(&mut self, menu: MenuBuilder<T>) -> Result<(), Error> {
+        let previous = {
+            let mut current = self.menu.write().map_err(|_| Error::OsError)?;
+            if current.as_ref() == Some(&menu) {
+                return Ok(());
+            }
+            current.replace(menu.clone())
+        };
+
+        if let Err(error) = self.sys.set_menu(&menu) {
+            if let Ok(mut current) = self.menu.write() {
+                if current.as_ref() == Some(&menu) {
+                    *current = previous;
+                }
+            }
+            return Err(error);
+        }
+
+        Ok(())
     }
 }
 

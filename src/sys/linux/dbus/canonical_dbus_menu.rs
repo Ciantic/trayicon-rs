@@ -5,6 +5,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::OwnedValue;
 use zbus::zvariant::Type;
@@ -22,15 +23,23 @@ pub struct DbusMenu<T>
 where
     T: crate::TrayIconEvent,
 {
-    menu_sys: super::super::MenuSys<T>,
+    // Serialized D-Bus view of the authoritative MenuBuilder below. Radio
+    // clicks update both representations before the application sees them.
+    menu_sys: Arc<RwLock<super::super::MenuSys<T>>>,
+    // Shared with TrayIcon and the other platform adapters; getters, setters,
+    // rebuilds, and native clicks all observe the same runtime model.
+    menu_state: crate::SharedMenu<T>,
 }
 
 impl<T> DbusMenu<T>
 where
     T: crate::TrayIconEvent,
 {
-    pub fn new(menu_sys: super::super::MenuSys<T>) -> Self {
-        DbusMenu { menu_sys }
+    pub fn new(menu_sys: super::super::MenuSys<T>, menu_state: crate::SharedMenu<T>) -> Self {
+        DbusMenu {
+            menu_sys: Arc::new(RwLock::new(menu_sys)),
+            menu_state,
+        }
     }
 
     fn build_layout_from_items(&self, items: &[super::super::MenuItemData<T>]) -> Vec<OwnedValue> {
@@ -64,9 +73,13 @@ where
                 );
 
                 if item.is_checkable {
+                    // Radio items are mutually exclusive within a group; the
+                    // host renders them as radio buttons. Checkbox items are
+                    // independent toggles.
+                    let toggle_type = if item.is_radio { "radio" } else { "checkbox" };
                     properties.insert(
                         "toggle-type".to_string(),
-                        OwnedValue::try_from(Value::new("checkbox")).unwrap(),
+                        OwnedValue::try_from(Value::new(toggle_type)).unwrap(),
                     );
                     properties.insert(
                         "toggle-state".to_string(),
@@ -114,6 +127,28 @@ where
         }
         None
     }
+
+    /// Apply authoritative MenuBuilder state changes to the serialized D-Bus
+    /// view and return the numeric ids whose properties changed.
+    fn apply_checked_changes(
+        items: &mut [super::super::MenuItemData<T>],
+        changes: &[(T, bool)],
+        updated: &mut Vec<(i32, bool)>,
+    ) {
+        for item in items {
+            if let Some(event_id) = item.event_id.as_ref() {
+                if let Some((_, checked)) = changes.iter().find(|(id, _)| id == event_id) {
+                    item.is_checked = *checked;
+                    updated.push((item.id, *checked));
+                }
+            }
+            Self::apply_checked_changes(&mut item.children, changes, updated);
+        }
+    }
+
+    fn toggle_state_value(checked: bool) -> OwnedValue {
+        OwnedValue::try_from(Value::new(if checked { 1i32 } else { 0i32 })).unwrap()
+    }
 }
 
 #[zbus::interface(name = "com.canonical.dbusmenu")]
@@ -128,14 +163,17 @@ where
         _recursion_depth: i32,
         _property_names: Vec<String>,
     ) -> zbus::fdo::Result<(u32, Layout)> {
-        // println!("get_layout called for parent_id {}", parent_id);
+        let menu_sys = self
+            .menu_sys
+            .read()
+            .map_err(|_| zbus::fdo::Error::Failed("menu lock poisoned".to_string()))?;
 
         if parent_id == 0 {
             // Root menu
-            let children = self.build_layout_from_items(&self.menu_sys.items);
+            let children = self.build_layout_from_items(&menu_sys.items);
 
             Ok((
-                0,
+                super::current_layout_revision(),
                 Layout {
                     id: parent_id,
                     properties: HashMap::new(),
@@ -144,11 +182,11 @@ where
             ))
         } else {
             // Submenu
-            if let Some(item) = self.find_item_by_id(parent_id, &self.menu_sys.items) {
+            if let Some(item) = self.find_item_by_id(parent_id, &menu_sys.items) {
                 let children = self.build_layout_from_items(&item.children);
 
                 Ok((
-                    0,
+                    super::current_layout_revision(),
                     Layout {
                         id: parent_id,
                         properties: HashMap::new(),
@@ -172,33 +210,117 @@ where
     }
 
     async fn get_property(&self, id: i32, name: String) -> zbus::fdo::Result<OwnedValue> {
-        Err(zbus::fdo::Error::InvalidArgs(format!(
-            "Property '{}' for id {} not found",
-            name, id
-        )))
+        let menu_sys = self
+            .menu_sys
+            .read()
+            .map_err(|_| zbus::fdo::Error::Failed("menu lock poisoned".to_string()))?;
+
+        if let Some(item) = self.find_item_by_id(id, &menu_sys.items) {
+            match name.as_str() {
+                "label" => Ok(OwnedValue::try_from(Value::new(item.label.as_str())).unwrap()),
+                "enabled" => Ok(OwnedValue::try_from(Value::new(!item.is_disabled)).unwrap()),
+                "toggle-type" if item.is_checkable => {
+                    Ok(OwnedValue::try_from(Value::new(if item.is_radio {
+                        "radio"
+                    } else {
+                        "checkbox"
+                    }))
+                    .unwrap())
+                }
+                "toggle-state" if item.is_checkable => {
+                    Ok(Self::toggle_state_value(item.is_checked))
+                }
+                _ => Err(zbus::fdo::Error::InvalidArgs(format!(
+                    "Property '{}' for id {} not found",
+                    name, id
+                ))),
+            }
+        } else {
+            Err(zbus::fdo::Error::InvalidArgs(format!(
+                "Property '{}' for id {} not found",
+                name, id
+            )))
+        }
     }
 
     async fn event(
         &self,
-        #[zbus(connection)] _conn: &Connection,
+        #[zbus(connection)] conn: &Connection,
         id: i32,
         event_id: String,
         _data: OwnedValue,
         _timestamp: u32,
     ) -> zbus::fdo::Result<()> {
-        // println!(
-        //     "Event received for id {} event_id {} timestamp {}",
-        //     id, event_id, _timestamp
-        // );
-        // TODO: Event menu opened, closed, do we need those?
+        // Only "clicked" is meaningful for our menu items.
+        if event_id != "clicked" {
+            return Ok(());
+        }
 
-        // Handle clicked events
-        if event_id == "clicked" {
-            if let Some(item) = self.find_item_by_id(id, &self.menu_sys.items) {
-                if let Some(event) = &item.event_id {
-                    if let Some(tx) = &self.menu_sys.event_sender {
-                        let _ = tx.send((id, event.clone()));
-                    }
+        let (event_to_send, is_radio) = {
+            let menu_sys = self
+                .menu_sys
+                .read()
+                .map_err(|_| zbus::fdo::Error::Failed("menu lock poisoned".to_string()))?;
+            match self.find_item_by_id(id, &menu_sys.items) {
+                Some(item) => (item.event_id.clone(), item.is_radio),
+                None => (None, false),
+            }
+        };
+
+        // MenuBuilder owns the radio invariant. The D-Bus tree is only a view
+        // and receives the exact changes returned by that one operation.
+        let mut changed = Vec::new();
+        if is_radio {
+            if let Some(event) = &event_to_send {
+                let model_changes = {
+                    let mut menu = self
+                        .menu_state
+                        .write()
+                        .map_err(|_| zbus::fdo::Error::Failed("menu lock poisoned".to_string()))?;
+                    let menu = menu.as_mut().ok_or_else(|| {
+                        zbus::fdo::Error::Failed("menu state missing".to_string())
+                    })?;
+                    menu.select_radio(event)
+                        .map_err(|_| zbus::fdo::Error::Failed("radio item not found".to_string()))?
+                };
+                if !model_changes.is_empty() {
+                    let mut menu_sys = self
+                        .menu_sys
+                        .write()
+                        .map_err(|_| zbus::fdo::Error::Failed("menu lock poisoned".to_string()))?;
+                    Self::apply_checked_changes(&mut menu_sys.items, &model_changes, &mut changed);
+                }
+            }
+        }
+
+        // Push the corrected toggle-state(s) to the host immediately and bump
+        // the layout revision so any cached layout is invalidated.
+        if !changed.is_empty() {
+            let updated: Vec<(i32, HashMap<String, OwnedValue>)> = changed
+                .iter()
+                .map(|(tid, checked)| {
+                    let mut props = HashMap::new();
+                    props.insert(
+                        "toggle-state".to_string(),
+                        Self::toggle_state_value(*checked),
+                    );
+                    (*tid, props)
+                })
+                .collect();
+
+            if let Ok(iface) = conn.object_server().interface::<_, Self>("/MenuBar").await {
+                let emitter = iface.signal_emitter();
+                let _ = Self::items_properties_updated(emitter, updated, Vec::new()).await;
+                let _ = Self::layout_updated(emitter, super::next_layout_revision(), 0).await;
+            }
+        }
+
+        // Forward the click to the application so it can act on it (e.g.
+        // rebuild the menu with the new selection).
+        if let Some(event) = event_to_send {
+            if let Ok(menu_sys) = self.menu_sys.read() {
+                if let Some(tx) = &menu_sys.event_sender {
+                    let _ = tx.send((id, event));
                 }
             }
         }

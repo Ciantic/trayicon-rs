@@ -30,6 +30,10 @@ pub use crate::trayicon::TrayIcon;
 pub use crate::trayiconbuilder::Error;
 pub use crate::trayiconbuilder::TrayIconBuilder;
 
+/// The application-facing menu model is the single source of truth. Platform
+/// menus are derived views that update this shared state on radio selection.
+pub(crate) type SharedMenu<T> = std::sync::Arc<std::sync::RwLock<Option<MenuBuilder<T>>>>;
+
 /// Status/visibility state for the tray icon (KDE StatusNotifierItem status)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrayIconStatus {

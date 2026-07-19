@@ -14,6 +14,11 @@ pub struct MenuItemData<T: TrayIconEvent> {
     pub event_id: Option<T>,
     pub is_separator: bool,
     pub is_checkable: bool,
+    /// When true this is a mutually-exclusive radio item: a `toggle-type` of
+    /// `"radio"` is exported over D-Bus instead of `"checkbox"`, and clicking
+    /// it clears the other radio items in its group. Only meaningful together
+    /// with `is_checkable`.
+    pub is_radio: bool,
     pub is_checked: bool,
     pub is_disabled: bool,
     pub children: Vec<MenuItemData<T>>,
@@ -41,7 +46,10 @@ where
 }
 
 /// Build the tray icon
-pub fn build_trayicon<T>(builder: &TrayIconBuilder<T>) -> Result<TrayIconSys<T>, Error>
+pub fn build_trayicon<T>(
+    builder: &TrayIconBuilder<T>,
+    menu_state: crate::SharedMenu<T>,
+) -> Result<TrayIconSys<T>, Error>
 where
     T: TrayIconEvent,
 {
@@ -56,11 +64,12 @@ where
     let on_right_click = builder.on_right_click.clone();
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
     let on_double_click = builder.on_double_click.clone();
-    let item_is_menu = builder.item_is_menu.clone();
+    let item_is_menu = builder.item_is_menu;
     // let notify_icon = WinNotifyIcon::new(hicon, tooltip);
 
     // Try to get a popup menu
-    if let Some(rhmenu) = &builder.menu {
+    let initial_menu = menu_state.read().map_err(|_| Error::OsError)?.clone();
+    if let Some(rhmenu) = &initial_menu {
         let mut built_menu = rhmenu.build()?;
 
         // Set up event handling channel
@@ -79,12 +88,12 @@ where
 
         // Register the menu with DBus
         let connection = get_dbus_connection();
-        register_dbus_menu_blocking(connection, built_menu.clone());
+        register_dbus_menu_blocking(connection, built_menu.clone(), menu_state.clone())?;
 
         menu = Some(built_menu);
     }
 
-    Ok(TrayIconSys::new(
+    TrayIconSys::new(
         sender,
         menu,
         Some(icon),
@@ -95,7 +104,8 @@ where
         on_double_click,
         on_right_click,
         item_is_menu,
-    )?)
+        menu_state,
+    )
 }
 
 /// Build the menu from Windows HMENU
@@ -139,6 +149,7 @@ where
             event_id: None,
             is_separator: true,
             is_checkable: false,
+            is_radio: false,
             is_checked: false,
             is_disabled: false,
             children: vec![],
@@ -151,6 +162,7 @@ where
             event_id: Some(id.clone()),
             is_separator: false,
             is_checkable: false,
+            is_radio: false,
             is_checked: false,
             is_disabled: *disabled,
             children: vec![],
@@ -167,6 +179,24 @@ where
             event_id: Some(id.clone()),
             is_separator: false,
             is_checkable: true,
+            is_radio: false,
+            is_checked: *is_checked,
+            is_disabled: *disabled,
+            children: vec![],
+        }),
+        MenuItem::Radio {
+            id,
+            name,
+            is_checked,
+            disabled,
+            ..
+        } => Ok(MenuItemData {
+            id: current_id,
+            label: name.clone(),
+            event_id: Some(id.clone()),
+            is_separator: false,
+            is_checkable: true,
+            is_radio: true,
             is_checked: *is_checked,
             is_disabled: *disabled,
             children: vec![],
@@ -188,6 +218,7 @@ where
                 event_id: None,
                 is_separator: false,
                 is_checkable: false,
+                is_radio: false,
                 is_checked: false,
                 is_disabled: *disabled,
                 children: child_items,
@@ -211,6 +242,9 @@ pub(crate) mod tests {
         SubSubItem1,
         SubSubItem2,
         SubSubItem3,
+        RadioA,
+        RadioB,
+        RadioC,
     }
 
     #[test]
@@ -257,5 +291,27 @@ pub(crate) mod tests {
         } else {
             panic!()
         }
+    }
+
+    #[test]
+    fn radio_items_serialize_as_separator_delimited_runs() {
+        let builder = MenuBuilder::new().submenu(
+            "Radio groups",
+            MenuBuilder::new()
+                .radio("A", true, Events::RadioA)
+                .radio("B", false, Events::RadioB)
+                .separator()
+                .radio("C", true, Events::RadioC),
+        );
+        let menu = build_menu(&builder).unwrap();
+        let children = &menu.items[0].children;
+
+        assert_eq!(children.len(), 4);
+        assert!(children[0].is_checkable && children[0].is_radio);
+        assert!(children[1].is_checkable && children[1].is_radio);
+        assert!(children[2].is_separator);
+        assert!(children[3].is_checkable && children[3].is_radio);
+        assert!(children[0].is_checked);
+        assert!(!children[1].is_checked);
     }
 }
